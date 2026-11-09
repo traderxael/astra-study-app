@@ -31,14 +31,30 @@ function countOccurrences(haystack: string, needle: string): number {
   return count;
 }
 
+export interface RetrieveOptions {
+  fileId?: string;
+  userId?: string;
+}
+
 export async function retrieveChunks(
   subjectId: string,
   query: string,
   k = 6,
+  opts?: RetrieveOptions,
 ): Promise<Chunk[]> {
   const terms = termsOf(query);
   if (terms.length === 0) return [];
-  const rows = await prisma.chunk.findMany({ where: { subjectId } });
+  const where: Record<string, unknown> = { subjectId };
+  if (opts?.fileId) where.fileId = opts.fileId;
+  if (opts?.userId) where.userId = opts.userId;
+  const found = await prisma.chunk.findMany({ where: where as never });
+  // Filtro en memoria defensivo: garantiza el alcance aunque el backend
+  // ignore parte del where (mocks / ILIKE parcial).
+  const rows = found.filter(
+    (r) =>
+      (!opts?.fileId || r.fileId === opts.fileId) &&
+      (!opts?.userId || r.userId === opts.userId),
+  );
   const scored = rows
     .map((row) => {
       const lower = row.content.toLowerCase();

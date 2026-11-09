@@ -32,6 +32,7 @@ export interface Citation {
 export interface TutorInput {
   subjectId: string;
   message: string;
+  fileId?: string;
 }
 
 export interface TutorOutput {
@@ -187,18 +188,43 @@ function toQuizItems(value: unknown): QuizItem[] {
   });
 }
 
-export async function askTutor(input: TutorInput): Promise<TutorOutput> {
-  const chunks = await retrieveChunks(input.subjectId, input.message);
+/**
+ * Variante en streaming del tutor: emite cada token vía onToken a
+ * medida que llega del proveedor y devuelve answer + citations al
+ * completarse. Sin material: sin tokens ni llamada a la IA.
+ */
+export async function askTutorStream(
+  input: TutorInput,
+  onToken: (token: string) => void,
+): Promise<TutorOutput> {
+  const chunks = await retrieveChunks(input.subjectId, input.message, 6, {
+    fileId: input.fileId,
+  });
   if (chunks.length === 0) {
-    // Sin material: nunca llamar a la IA (Review Focus 4).
     return { answer: NO_MATERIAL_MESSAGE, citations: [] };
   }
   requireApiKey();
   const stream = await chatCompletion(
     buildTutorMessages(buildContext(chunks), input.message),
   );
-  const answer = (await readStreamText(stream)).trim();
-  return { answer, citations: citationsFromAnswer(answer, chunks) };
+  const reader = stream.getReader();
+  const decoder = new TextDecoder();
+  let answer = "";
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    const text = decoder.decode(value, { stream: true });
+    if (text) {
+      answer += text;
+      onToken(text);
+    }
+  }
+  const finalAnswer = answer.trim();
+  return { answer: finalAnswer, citations: citationsFromAnswer(finalAnswer, chunks) };
+}
+
+export async function askTutor(input: TutorInput): Promise<TutorOutput> {
+  return askTutorStream(input, () => undefined);
 }
 
 export async function summarize(input: SummaryInput): Promise<SummaryOutput> {

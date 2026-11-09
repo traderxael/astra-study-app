@@ -12,10 +12,13 @@ type ConversationRow = { id: string; userId: string; subjectId: string; title: s
 type MessageRow = { id: string; conversationId: string; role: string; content: string; createdAt: Date }
 type ProgressRow = { id: string; userId: string; subjectId: string; type: string; payload: unknown; createdAt: Date }
 
+type FileRow = { id: string; userId: string; subjectId: string; name: string }
+
 const { store } = vi.hoisted(() => ({
   store: {
     subjects: [] as SubjectRow[],
     chunks: [] as ChunkRow[],
+    files: [] as FileRow[],
     conversations: [] as ConversationRow[],
     messages: [] as MessageRow[],
     progressEvents: [] as ProgressRow[],
@@ -38,11 +41,24 @@ vi.mock('../../lib/db', () => ({
       }),
     },
     chunk: {
-      findMany: vi.fn(async ({ where }: { where: { subjectId?: string; id?: { in: string[] } } }) => {
+      findMany: vi.fn(async ({ where }: { where: { subjectId?: string; fileId?: string; userId?: string; id?: { in: string[] } } }) => {
         if (where?.id?.in) {
-          return store.chunks.filter((c) => where.id!.in!.includes(c.id)).map((c) => ({ ...c }))
+          return store.chunks
+            .filter((c) => where.id!.in!.includes(c.id))
+            .filter((c) => !where.userId || c.userId === where.userId)
+            .map((c) => ({ ...c }))
         }
-        return store.chunks.filter((c) => c.subjectId === where?.subjectId).map((c) => ({ ...c }))
+        return store.chunks
+          .filter((c) => c.subjectId === where?.subjectId)
+          .filter((c) => !where?.fileId || c.fileId === where.fileId)
+          .filter((c) => !where?.userId || c.userId === where.userId)
+          .map((c) => ({ ...c }))
+      }),
+    },
+    file: {
+      findUnique: vi.fn(async ({ where }: { where: { id: string } }) => {
+        const row = store.files.find((f) => f.id === where.id)
+        return row ? { ...row, mimeType: 'text/plain', size: 1, status: 'uploaded', createdAt: new Date(), updatedAt: new Date() } : null
       }),
     },
     conversation: {
@@ -78,8 +94,16 @@ vi.mock('../../lib/db', () => ({
         store.messages.push(row)
         return { ...row }
       }),
+      findMany: vi.fn(async ({ where }: { where: { conversationId: string } }) =>
+        store.messages.filter((m) => m.conversationId === where.conversationId).map((m) => ({ ...m })),
+      ),
     },
     progressEvent: {
+      findMany: vi.fn(async ({ where }: { where: { userId: string; subjectId: string; type: string } }) =>
+        store.progressEvents
+          .filter((p) => p.userId === where.userId && p.subjectId === where.subjectId && p.type === where.type)
+          .map((p) => ({ ...p })),
+      ),
       create: vi.fn(async ({ data }: { data: { userId: string; subjectId: string; type: string; payload?: unknown } }) => {
         const row: ProgressRow = {
           id: `prog-${store.progressEvents.length + 1}`,
@@ -109,9 +133,9 @@ function sseResponse(text: string): Response {
 
 // Import dinámico: en RED el módulo de progress aún no existe y el import estático
 // fallaría en colección; el test de chat sigue corriendo y falla por persistencia.
-import { POST as POSTChat } from '../../app/api/chat/route'
+import { POST as POSTChat, GET as GETChat } from '../../app/api/chat/route'
 
-function postChat(body: { subjectId: string; message: string }): Promise<Response> {
+function postChat(body: { subjectId: string; message: string; fileId?: string; stream?: boolean }): Promise<Response> {
   const req = new Request('http://localhost/api/chat', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -122,6 +146,8 @@ function postChat(body: { subjectId: string; message: string }): Promise<Respons
 
 function seed() {
   store.subjects.push({ id: 'bio', userId: 'admin', name: 'Biología', createdAt: new Date(), updatedAt: new Date() })
+  store.files.push({ id: 'file-bio-1', userId: 'admin', subjectId: 'bio', name: 'celula.txt' })
+  store.files.push({ id: 'file-bio-2', userId: 'admin', subjectId: 'bio', name: 'otro.txt' })
   store.chunks.push({
     id: 'chunk-mitosis',
     userId: 'admin',
@@ -132,12 +158,23 @@ function seed() {
     tokenCount: 20,
     createdAt: new Date(),
   })
+  store.chunks.push({
+    id: 'chunk-fotosintesis',
+    userId: 'admin',
+    subjectId: 'bio',
+    fileId: 'file-bio-2',
+    chunkIndex: 0,
+    content: 'La fotosíntesis ocurre en los cloroplastos de las hojas.',
+    tokenCount: 10,
+    createdAt: new Date(),
+  })
 }
 
 describe('Task 6 — chat tutor con persistencia y progreso', () => {
   beforeEach(() => {
     store.subjects.length = 0
     store.chunks.length = 0
+    store.files.length = 0
     store.conversations.length = 0
     store.messages.length = 0
     store.progressEvents.length = 0
@@ -158,6 +195,7 @@ describe('Task 6 — chat tutor con persistencia y progreso', () => {
     expect(body.answer).toContain('mitosis')
     expect(body.citations.length).toBeGreaterThan(0)
     expect(body.citations[0]).toMatchObject({ fileId: 'file-bio-1', chunkId: 'chunk-mitosis' })
+    expect(body.citations[0].snippet).toContain('mitosis')
   })
 
   it('POST /api/chat persiste Conversation/Message y emite ProgressEvent', async () => {
@@ -170,6 +208,46 @@ describe('Task 6 — chat tutor con persistencia y progreso', () => {
     expect(store.messages[1].content).toContain('mitosis')
     expect(store.progressEvents).toHaveLength(1)
     expect(store.progressEvents[0]).toMatchObject({ userId: 'admin', subjectId: 'bio', type: 'chat' })
+    // Citas completas en el payload (Message no tiene columna de citas).
+    const payload = store.progressEvents[0].payload as { citations: Array<Record<string, unknown>> }
+    expect(payload.citations[0]).toMatchObject({ fileId: 'file-bio-1', chunkId: 'chunk-mitosis' })
+    expect(payload.citations[0].snippet).toContain('mitosis')
+  })
+
+  it('POST /api/chat con stream:true emite SSE token/done y persiste una sola vez', async () => {
+    const res = await postChat({ subjectId: 'bio', message: '¿qué es mitosis?', stream: true })
+    expect(res.status).toBe(200)
+    expect(res.headers.get('content-type')).toContain('text/event-stream')
+    const text = await res.text()
+    expect(text).toContain('"token"')
+    expect(text).toContain('"done":true')
+    expect(text).toContain('chunk-mitosis')
+    expect(store.progressEvents).toHaveLength(1)
+    expect(store.messages.map((m) => m.role)).toEqual(['user', 'assistant'])
+  })
+
+  it('POST /api/chat con fileId acota la recuperación a ese archivo', async () => {
+    // 'celular' (file-bio-1) y 'fotosíntesis' (file-bio-2) puntúan en ambos
+    // chunks; con fileId=file-bio-2 la cita [1] debe salir de ese archivo.
+    const res = await postChat({ subjectId: 'bio', message: 'celular fotosíntesis', fileId: 'file-bio-2' })
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.citations.length).toBeGreaterThan(0)
+    expect(body.citations.every((c: { fileId: string }) => c.fileId === 'file-bio-2')).toBe(true)
+
+    const res404 = await postChat({ subjectId: 'bio', message: 'hola', fileId: 'no-existe' })
+    expect(res404.status).toBe(404)
+  })
+
+  it('GET /api/chat rehidrata el historial persistido con citas', async () => {
+    await postChat({ subjectId: 'bio', message: '¿qué es mitosis?' })
+    const res = await GETChat(new Request('http://localhost/api/chat?subjectId=bio'))
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.messages.map((m: { role: string }) => m.role)).toEqual(['user', 'assistant'])
+    expect(body.messages[0].content).toBe('¿qué es mitosis?')
+    expect(body.messages[1].citations[0]).toMatchObject({ chunkId: 'chunk-mitosis' })
+    expect(body.messages[1].citations[0].snippet).toContain('mitosis')
   })
 
   it("POST /api/progress { type: 'chat', subjectId } crea ProgressEvent", async () => {
