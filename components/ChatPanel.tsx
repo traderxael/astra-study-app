@@ -36,6 +36,31 @@ export default function ChatPanel({ subjectId, files = [] }: ChatPanelProps) {
   const [scope, setScope] = useState<string>("subject");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+
+  async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    if (!f || uploading) return;
+    setError(null);
+    setUploading(true);
+    try {
+      const form = new FormData();
+      form.append("file", f);
+      const res = await fetch(`/api/subjects/${encodeURIComponent(subjectId)}/files`, {
+        method: "POST",
+        body: form,
+      });
+      if (!res.ok) {
+        const body = (await res.json().catch(() => ({}))) as { error?: string };
+        throw new Error(body.error ?? "No se pudo subir el archivo");
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error inesperado");
+    } finally {
+      setUploading(false);
+      e.target.value = "";
+    }
+  }
 
   const loadHistory = useCallback(async () => {
     try {
@@ -174,7 +199,7 @@ export default function ChatPanel({ subjectId, files = [] }: ChatPanelProps) {
             {m.citations && m.citations.length > 0 ? (
               <ul>
                 {m.citations.map((c) => (
-                  <li key={c.chunkId}>
+                  <li key={c.chunkId} data-testid="citation">
                     Fuente: archivo {c.fileId} · fragmento {c.chunkId}
                     {c.snippet ? <span> — {c.snippet}</span> : null}
                   </li>
@@ -191,15 +216,28 @@ export default function ChatPanel({ subjectId, files = [] }: ChatPanelProps) {
         <label>
           Pregunta
           <input
+            data-testid="chat-input"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="¿qué es mitosis?"
           />
         </label>
-        <button type="submit" disabled={loading || !input.trim()}>
+        <button type="submit" data-testid="chat-send" disabled={loading || !input.trim()}>
           Preguntar
         </button>
       </form>
+
+      <label>
+        Subir material (.txt o .pdf digital)
+        <input
+          type="file"
+          data-testid="file-input"
+          accept=".txt,.pdf"
+          onChange={onFile}
+          disabled={uploading}
+        />
+      </label>
+      {uploading ? <p>Subiendo…</p> : null}
     </section>
   );
 }

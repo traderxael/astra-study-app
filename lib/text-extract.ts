@@ -10,7 +10,9 @@
  * Solo servidor.
  */
 
-import pdfParse from "pdf-parse";
+// pdf-parse se carga lazy: su código de debug (`if (!module.parent)` lee
+// ./test/data/*.pdf) rompería el `next build` al recoger datos de
+// página si se evaluara en tiempo de build.
 
 export const SCANNED_MESSAGE = "v1 solo texto digital, OCR en v2";
 
@@ -59,6 +61,7 @@ export async function extractText(file: FileUpload): Promise<string> {
   const buffer = Buffer.from(await file.arrayBuffer());
 
   if (isPdf) {
+    const { default: pdfParse } = await import("pdf-parse");
     const parsed = await pdfParse(buffer);
     const text = parsed.text ?? "";
     if (!text.trim()) throw new ScannedPdfError();

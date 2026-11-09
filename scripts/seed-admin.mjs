@@ -30,11 +30,27 @@ try {
 const prisma = new PrismaClient();
 try {
   if (process.env.DATABASE_URL) {
+    // La auth real es env-based (ADMIN_EMAIL / ADMIN_PASSWORD_HASH,
+    // lib/auth.ts, userId de sesión "admin"); la fila User es el
+    // registro canónico para deploy. Sin passwordHash en el schema.
     await prisma.user.upsert({
       where: { email },
-      update: { passwordHash: hash },
-      create: { email, passwordHash: hash, name: email },
+      update: {},
+      create: { email, name: email },
     });
+    // Materia por defecto para que /chat renderice el panel sin pasos extra
+    // (el smoke E2E logea y espera el ChatPanel con file-input). OJO: el
+    // scope es el userId de sesión ("admin", ver lib/auth.ts), no el id
+    // cuid de la fila User.
+    const subjectName = process.env.ADMIN_DEFAULT_SUBJECT ?? "Biología";
+    const existing = await prisma.subject.findFirst({
+      where: { userId: "admin", name: subjectName },
+    });
+    if (!existing) {
+      await prisma.subject.create({
+        data: { userId: "admin", name: subjectName },
+      });
+    }
     console.log(`Usuario ${email} creado/actualizado en la base de datos.`);
   } else {
     console.log("Sin DATABASE_URL: hash listo para ADMIN_PASSWORD_HASH.");
