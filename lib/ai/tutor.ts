@@ -72,6 +72,7 @@ export interface QuizItem {
   options: string[];
   answerIndex: number;
   explanation?: string;
+  kind?: "multiple" | "open";
 }
 
 /** Mensaje fijo cuando no hay material recuperado (Review Focus 4). */
@@ -166,9 +167,43 @@ function toQuizItems(value: unknown): QuizItem[] {
       options?: unknown;
       answerIndex?: unknown;
       explanation?: unknown;
+      kind?: unknown;
     };
+    if (typeof q.question !== "string" || !q.question.trim()) {
+      throw new Error("La IA devolvió un formato inválido (pregunta/opciones)");
+    }
+    // Tipo: "open" explícito, o inferido por options vacías (compat).
+    const rawKind = q.kind;
+    let kind: "multiple" | "open";
+    if (rawKind === "open") kind = "open";
+    else if (rawKind === "multiple") kind = "multiple";
+    else if (Array.isArray(q.options) && q.options.length === 0) kind = "open";
+    else if (Array.isArray(q.options) && q.options.length === 4) kind = "multiple";
+    else if (rawKind !== undefined) {
+      throw new Error("La IA devolvió un formato inválido (pregunta/opciones)");
+    } else {
+      throw new Error("La IA devolvió un formato inválido (pregunta/opciones)");
+    }
+
+    if (kind === "open") {
+      if (
+        !Array.isArray(q.options) ||
+        q.options.length !== 0 ||
+        q.answerIndex !== -1
+      ) {
+        throw new Error("La IA devolvió un formato inválido (pregunta/opciones)");
+      }
+      const openItem: QuizItem = {
+        question: q.question,
+        options: [],
+        answerIndex: -1,
+        kind: "open",
+      };
+      if (typeof q.explanation === "string") openItem.explanation = q.explanation;
+      return openItem;
+    }
+
     if (
-      typeof q.question !== "string" ||
       !Array.isArray(q.options) ||
       q.options.length !== 4 ||
       !q.options.every((o) => typeof o === "string") ||
@@ -182,6 +217,7 @@ function toQuizItems(value: unknown): QuizItem[] {
       question: q.question,
       options: q.options as string[],
       answerIndex: q.answerIndex as number,
+      kind: "multiple",
     };
     if (typeof q.explanation === "string") quizItem.explanation = q.explanation;
     return quizItem;

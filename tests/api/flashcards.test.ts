@@ -192,6 +192,13 @@ describe('Task 7 — POST /api/flashcards', () => {
     expect(store.progressEvents[0]).toMatchObject({ userId: 'admin', subjectId: 'bio', type: 'flashcards' })
   })
 
+  it('POST /api/flashcards rechaza count fuera de rango (400)', async () => {
+    for (const bad of [0, -1, 13, 2.5, 100, '5']) {
+      const res = await postFlashcards({ subjectId: 'bio', count: bad })
+      expect(res.status).toBe(400)
+    }
+  })
+
   it('POST /api/flashcards sin OPENAI_API_KEY devuelve 503 degradado', async () => {
     delete process.env.OPENAI_API_KEY
     const res = await postFlashcards({ subjectId: 'bio' })

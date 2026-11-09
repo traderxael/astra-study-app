@@ -1,10 +1,11 @@
 /**
  * POST /api/flashcards — mazo de fichas desde el material (Task 7).
  *
- * Contrato: POST { subjectId, topic? } -> 200 Flashcard[] [{ front, back }].
- * `topic` opcional: si falta, se deriva del primer chunk de la materia
- * (si no, 'la' como consulta genérica en español) para que retrieveChunks
- * tenga términos. `count` opcional (tope del servicio).
+ * Contrato: POST { subjectId, topic?, count? } -> 200 Flashcard[] [{ front, back }].
+ * `topic` opcional: si falta, resolveGenerationTopic (lib/generation-topic.ts)
+ * deriva un tema balanceado de TODOS los chunks (frecuencia de términos de
+ * contenido), sin sesgar a un solo chunk. Sin material => "" y generación
+ * devuelve [] sin llamar a la IA. `count` opcional entero 1..12.
  *
  * Orden degradado (Review Focus 3, como chat/summarize): sesión →
  * body 400 → sin clave 503 'IA no configurada' → materia ajena 404 →
@@ -23,24 +24,7 @@ import {
   AiUpstreamError,
 } from "../../../lib/ai/provider";
 import { generateFlashcards } from "../../../lib/ai/tutor";
-
-async function resolveTopic(subjectId: string, topic?: unknown): Promise<string> {
-  if (typeof topic === "string" && topic.trim()) return topic.trim();
-  // Sin tema: derivar uno del material real para que el retrieval puntúe.
-  try {
-    const db = prisma as unknown as {
-      chunk?: { findMany: (a: unknown) => Promise<Array<{ content: string }>> };
-    };
-    if (db.chunk) {
-      const rows = await db.chunk.findMany({ where: { subjectId } });
-      const first = rows?.[0]?.content?.trim();
-      if (first) return first.slice(0, 500);
-    }
-  } catch (err) {
-    console.error("resolveTopic flashcards failed", err);
-  }
-  return "la";
-}
+import { resolveGenerationTopic, isValidCount } from "../../../lib/generation-topic";
 
 export async function POST(request: Request): Promise<Response> {
   const session = await requireSession();
@@ -63,7 +47,7 @@ export async function POST(request: Request): Promise<Response> {
   if (topic !== undefined && typeof topic !== "string") {
     return Response.json({ error: "topic inválido" }, { status: 400 });
   }
-  if (count !== undefined && typeof count !== "number") {
+  if (count !== undefined && !isValidCount(count)) {
     return Response.json({ error: "count inválido" }, { status: 400 });
   }
 
@@ -77,7 +61,7 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   try {
-    const effectiveTopic = await resolveTopic(subjectId, topic);
+    const effectiveTopic = await resolveGenerationTopic(subjectId, topic);
     const cards = await generateFlashcards({
       subjectId,
       topic: effectiveTopic,

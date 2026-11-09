@@ -1,13 +1,13 @@
 import { requireSession } from "../../../lib/auth-guard";
 import { listSubjects } from "../../../lib/subjects";
-import { prisma } from "../../../lib/db";
+import { aggregateProgress } from "../../../lib/progress";
 import SubjectNav from "../../../components/SubjectNav";
 
 /**
  * Dashboard de progreso (Task 7). Server component: para la materia
- * preseleccionada (?subjectId= o la primera) agrega ProgressEvent
- * (sessions) y QuizAttempt (attempts, accuracy = Σscore/Σtotal),
- * la misma agregación de GET /api/progress?subjectId=.
+ * preseleccionada (?subjectId= o la primera) muestra la agregación
+ * de GET /api/progress vía aggregateProgress (fuente única). Etiqueta
+ * honesta: "Eventos de estudio" (ticks de ProgressEvent), no días.
  */
 export default async function DashboardPage({
   searchParams,
@@ -21,37 +21,13 @@ export default async function DashboardPage({
   const active =
     subjects.find((s) => s.id === params.subjectId) ?? subjects[0] ?? null;
 
-  let sessions = 0;
-  let attempts = 0;
-  let accuracy = 0;
-  if (active) {
-    try {
-      const events = await prisma.progressEvent.findMany({
-        where: { userId, subjectId: active.id },
-      });
-      sessions = events.length;
-    } catch {
-      sessions = 0;
-    }
-    try {
-      const rows = await prisma.quizAttempt.findMany({
-        where: { userId, subjectId: active.id },
-      });
-      attempts = rows.length;
-      let sumScore = 0;
-      let sumTotal = 0;
-      for (const row of rows) {
-        if (row.total > 0) {
-          sumScore += row.score;
-          sumTotal += row.total;
-        }
-      }
-      accuracy = sumTotal > 0 ? sumScore / sumTotal : 0;
-    } catch {
-      attempts = 0;
-      accuracy = 0;
-    }
-  }
+  const summary = active
+    ? await aggregateProgress(userId, active.id).catch(() => ({
+        sessions: 0,
+        attempts: 0,
+        accuracy: 0,
+      }))
+    : { sessions: 0, attempts: 0, accuracy: 0 };
 
   return (
     <main>
@@ -63,10 +39,10 @@ export default async function DashboardPage({
       {active ? (
         <section aria-label={`Progreso de ${active.name}`}>
           <h2>{active.name}</h2>
-          <p>Sesiones de estudio: {sessions}</p>
-          <p>Intentos de práctica: {attempts}</p>
-          <p>Precisión: {Math.round(accuracy * 100)}%</p>
-          {attempts === 0 ? (
+          <p>Eventos de estudio (chats, fichas y prácticas): {summary.sessions}</p>
+          <p>Intentos de práctica: {summary.attempts}</p>
+          <p>Precisión: {Math.round(summary.accuracy * 100)}%</p>
+          {summary.attempts === 0 ? (
             <p>Practica con /practice para ver tu precisión acá.</p>
           ) : null}
         </section>

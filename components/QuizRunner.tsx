@@ -7,6 +7,7 @@ export interface QuizItemView {
   options: string[];
   answerIndex: number;
   explanation?: string;
+  kind?: "multiple" | "open";
 }
 
 interface QuizRunnerProps {
@@ -15,8 +16,10 @@ interface QuizRunnerProps {
 
 type AnswerMap = Record<number, number | string>;
 
-/** Una pregunta es abierta corta si no trae opciones (texto libre). */
+/** Una pregunta es abierta corta si kind es open o no trae opciones. */
 function isOpen(item: QuizItemView): boolean {
+  if (item.kind === "open") return true;
+  if (item.kind === "multiple") return false;
   return !Array.isArray(item.options) || item.options.length === 0;
 }
 
@@ -25,9 +28,10 @@ function isOpen(item: QuizItemView): boolean {
  * Genera vía POST /api/quiz ({ subjectId, n, topic? }), navega por
  * preguntas, responde (radio múltiple o texto libre para abierta corta),
  * corrige al terminar y registra el intento con POST /api/quiz
- * ({ subjectId, answers, score, total }). Las abiertas cortas no se
- * auto-califican (no suman al total); se muestran con su explicación
- * para auto-revisión.
+ * ({ subjectId, items, answers }) — la calificación la computa el
+ * servidor contra los items generados. Las abiertas cortas no se
+ * auto-califican (no suman al total); un cuestionario todo-abiertas
+ * se muestra sin calificación y SIN persistir un intento falso 0/N.
  */
 export default function QuizRunner({ subjectId }: QuizRunnerProps) {
   const [items, setItems] = useState<QuizItemView[]>([]);
@@ -40,6 +44,7 @@ export default function QuizRunner({ subjectId }: QuizRunnerProps) {
   const [finished, setFinished] = useState(false);
   const [score, setScore] = useState(0);
   const [total, setTotal] = useState(0);
+  const [graded, setGraded] = useState<boolean | null>(null);
 
   const generate = useCallback(async () => {
     const t = topic.trim();
@@ -47,6 +52,7 @@ export default function QuizRunner({ subjectId }: QuizRunnerProps) {
     setLoading(true);
     setError(null);
     setFinished(false);
+    setGraded(null);
     try {
       const res = await fetch("/api/quiz", {
         method: "POST",
@@ -81,43 +87,62 @@ export default function QuizRunner({ subjectId }: QuizRunnerProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [subjectId]);
 
-  function computeScore(): { score: number; total: number } {
-    let correct = 0;
-    let graded = 0;
-    items.forEach((item, i) => {
-      if (isOpen(item)) return;
-      graded += 1;
-      if (answers[i] === item.answerIndex) correct += 1;
-    });
-    return { score: correct, total: graded };
-  }
-
   async function finish() {
-    const { score: finalScore, total: finalTotal } = computeScore();
-    const payloadAnswers = items.map((item, i) => ({
-      question: item.question,
-      chosen: answers[i] ?? null,
-      correct: isOpen(item) ? null : answers[i] === item.answerIndex,
-    }));
-    const safeTotal = finalTotal > 0 ? finalTotal : items.length;
-    const safeScore = finalTotal > 0 ? finalScore : 0;
-    setScore(safeScore);
-    setTotal(safeTotal);
+    const chosenAnswers = items.map((item, i) => answers[i] ?? null);
+    // Cuenta múltiple para decidir si hay algo calificable.
+    const gradedCount = items.filter((it) => !isOpen(it)).length;
     setFinished(true);
-    // Registra el intento (best-effort: igual muestra el resultado).
+
+    if (gradedCount === 0) {
+      // Todo abiertas cortas: sin calificación automática y SIN
+      // persistir intento falso (ese 0/N sesgaría accuracy).
+      setScore(0);
+      setTotal(0);
+      setGraded(false);
+      return;
+    }
+
+    // Calificación server-side: el cliente envía items + elegidos.
     try {
-      await fetch("/api/quiz", {
+      const res = await fetch("/api/quiz", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          subjectId,
-          answers: payloadAnswers,
-          score: safeScore,
-          total: safeTotal,
-        }),
+        body: JSON.stringify({ subjectId, items, answers: chosenAnswers }),
       });
+      const body = (await res.json()) as {
+        score?: number;
+        total?: number;
+        graded?: boolean;
+        error?: string;
+      };
+      if (res.ok && typeof body.score === "number" && typeof body.total === "number") {
+        setScore(body.score);
+        setTotal(body.total);
+        setGraded(body.graded !== false);
+        return;
+      }
+      // Fallo del endpoint: corrección local solo para mostrar (no persiste).
+      let correct = 0;
+      let totalLocal = 0;
+      items.forEach((item, i) => {
+        if (isOpen(item)) return;
+        totalLocal += 1;
+        if (answers[i] === item.answerIndex) correct += 1;
+      });
+      setScore(correct);
+      setTotal(totalLocal);
+      setGraded(true);
     } catch {
-      // El resultado ya es visible; el progreso se reintentará en la próxima práctica.
+      let correct = 0;
+      let totalLocal = 0;
+      items.forEach((item, i) => {
+        if (isOpen(item)) return;
+        totalLocal += 1;
+        if (answers[i] === item.answerIndex) correct += 1;
+      });
+      setScore(correct);
+      setTotal(totalLocal);
+      setGraded(true);
     }
   }
 
@@ -214,9 +239,13 @@ export default function QuizRunner({ subjectId }: QuizRunnerProps) {
 
         {finished ? (
           <article>
-            <p>
-              Resultado: {score} de {total} correctas
-            </p>
+            {graded === false ? (
+              <p>Cuestionario de abiertas cortas (sin calificación automática) — revisá las explicaciones.</p>
+            ) : (
+              <p>
+                Resultado: {score} de {total} correctas
+              </p>
+            )}
             <ul>
               {items.map((item, i) => (
                 <li key={i}>

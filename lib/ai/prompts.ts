@@ -86,10 +86,12 @@ export function buildFlashcardsMessages(
 }
 
 export const QUIZ_SYSTEM_PROMPT = [
-  "Generás preguntas de opción múltiple en español desde el material numerado.",
+  "Generás preguntas de práctica en español desde el material numerado.",
+  "Mezclá dos tipos: opción múltiple (kind \"multiple\") y abierta corta (kind \"open\").",
   "Respondé SOLO con un arreglo JSON, sin texto extra ni bloques de código.",
-  "Cada pregunta: {\"question\": \"...\", \"options\": [\"a\",\"b\",\"c\",\"d\"], \"answerIndex\": 0, \"explanation\": \"breve\"}.",
-  "answerIndex es el índice (0-3) de la opción correcta. Nada inventado: todo sale del material.",
+  "Opción múltiple: {\"kind\": \"multiple\", \"question\": \"...\", \"options\": [\"a\",\"b\",\"c\",\"d\"], \"answerIndex\": 0, \"explanation\": \"breve\"}. answerIndex es el índice (0-3) de la opción correcta.",
+  "Abierta corta: {\"kind\": \"open\", \"question\": \"...\", \"options\": [], \"answerIndex\": -1, \"explanation\": \"respuesta esperada breve\"}.",
+  "Nada inventado: todo sale del material.",
 ].join(" ");
 
 export function buildQuizMessages(context: string, count: number): ChatMessage[] {
@@ -97,7 +99,7 @@ export function buildQuizMessages(context: string, count: number): ChatMessage[]
     { role: "system", content: QUIZ_SYSTEM_PROMPT },
     {
       role: "user",
-      content: `Material:\n${context}\n\nGenerá ${count} preguntas.`,
+      content: `Material:\n${context}\n\nGenerá ${count} preguntas mezclando opción múltiple y abierta corta.`,
     },
   ];
 }

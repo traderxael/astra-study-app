@@ -1,7 +1,7 @@
 // tests/api/quiz.test.ts — Task 7 (TDD, sin DB real, R-01).
 // Mockea requireSession, prisma (store en memoria) y fetch global (SSE de la IA).
-// - POST /api/quiz { subjectId, n } -> QuizItem[] (opción múltiple; QuizRunner suma abierta corta).
-// - POST /api/quiz { subjectId, answers, score, total } -> QuizAttempt 201 (práctica).
+// - POST /api/quiz { subjectId, n } -> QuizItem[] mix múltiple + abierta corta.
+// - POST /api/quiz { subjectId, items, answers } -> QuizAttempt 201 con score server-side.
 // - GET /api/progress?subjectId -> { sessions, attempts, accuracy }.
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
@@ -168,6 +168,46 @@ describe('Task 7 — POST /api/quiz', () => {
     expect(items[0]).toHaveProperty('answerIndex')
   })
 
+  it('POST /api/quiz genera mezcla opción múltiple + abierta corta', async () => {
+    fetchMock.mockResolvedValue(
+      sseResponse(
+        JSON.stringify([
+          {
+            kind: 'multiple',
+            question: '¿Qué produce la mitosis?',
+            options: ['Dos hijas idénticas', 'Dos hijas distintas', 'Cuatro células', 'Una célula'],
+            answerIndex: 0,
+            explanation: 'Produce dos células hijas idénticas.',
+          },
+          {
+            kind: 'open',
+            question: 'Explicá con tus palabras qué es la mitosis.',
+            options: [],
+            answerIndex: -1,
+            explanation: 'División celular en dos hijas idénticas.',
+          },
+        ]),
+      ),
+    )
+    const res = await postQuiz({ subjectId: 'bio', n: 2, topic: 'mitosis' })
+    expect(res.status).toBe(200)
+    const items = await res.json()
+    expect(items).toHaveLength(2)
+    expect(items[0]).toMatchObject({ kind: 'multiple', answerIndex: 0 })
+    expect(items[0].options).toHaveLength(4)
+    expect(items[1]).toMatchObject({ kind: 'open', options: [], answerIndex: -1 })
+    expect(items[1]).toHaveProperty('explanation')
+  })
+
+  it('POST /api/quiz rechaza n/count fuera de rango (400)', async () => {
+    for (const bad of [0, -1, 13, 2.5, 100, '5']) {
+      const res = await postQuiz({ subjectId: 'bio', n: bad })
+      expect(res.status).toBe(400)
+    }
+    const resCount = await postQuiz({ subjectId: 'bio', count: 0 })
+    expect(resCount.status).toBe(400)
+  })
+
   it('POST /api/quiz sin n usa un tamaño por defecto', async () => {
     const res = await postQuiz({ subjectId: 'bio', topic: 'mitosis' })
     expect(res.status).toBe(200)
@@ -200,25 +240,89 @@ describe('Task 7 — POST /api/quiz', () => {
     expect(res400.status).toBe(400)
   })
 
-  it('POST /api/quiz con answers persiste QuizAttempt y ProgressEvent quiz', async () => {
+  it('POST /api/quiz con items+answers persiste QuizAttempt con score server-side', async () => {
     const res = await postQuiz({
       subjectId: 'bio',
-      answers: [{ question: '¿Qué produce la mitosis?', chosen: 0 }],
-      score: 1,
-      total: 1,
+      items: [
+        {
+          kind: 'multiple',
+          question: '¿Qué produce la mitosis?',
+          options: ['Dos hijas idénticas', 'Dos hijas distintas', 'Cuatro células', 'Una célula'],
+          answerIndex: 0,
+          explanation: 'Produce dos células hijas idénticas.',
+        },
+      ],
+      answers: [0],
     })
     expect(res.status).toBe(201)
     const body = await res.json()
     expect(body.score).toBe(1)
     expect(body.total).toBe(1)
+    expect(body.graded).toBe(true)
     expect(store.quizAttempts).toHaveLength(1)
     expect(store.quizAttempts[0]).toMatchObject({ userId: 'admin', subjectId: 'bio', score: 1, total: 1 })
     expect(store.progressEvents.some((p) => p.type === 'quiz')).toBe(true)
     expect(fetchMock).not.toHaveBeenCalled()
   })
 
+  it('POST /api/quiz ignora score/total del cliente (califica el servidor)', async () => {
+    const res = await postQuiz({
+      subjectId: 'bio',
+      items: [
+        {
+          kind: 'multiple',
+          question: '¿Qué produce la mitosis?',
+          options: ['Dos hijas idénticas', 'Dos hijas distintas', 'Cuatro células', 'Una célula'],
+          answerIndex: 0,
+          explanation: 'Produce dos células hijas idénticas.',
+        },
+      ],
+      answers: [1],
+      score: 999,
+      total: 999,
+    })
+    expect(res.status).toBe(201)
+    const body = await res.json()
+    expect(body.score).toBe(0)
+    expect(body.total).toBe(1)
+    expect(store.quizAttempts[0]).toMatchObject({ score: 0, total: 1 })
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it('POST /api/quiz todo-abiertas no persiste intento falso 0/N', async () => {
+    const res = await postQuiz({
+      subjectId: 'bio',
+      items: [
+        {
+          kind: 'open',
+          question: 'Explicá con tus palabras la mitosis.',
+          options: [],
+          answerIndex: -1,
+          explanation: 'División celular en dos hijas idénticas.',
+        },
+      ],
+      answers: ['texto libre'],
+    })
+    expect(res.status).toBe(201)
+    const body = await res.json()
+    expect(body).toMatchObject({ score: 0, total: 0, graded: false })
+    expect(store.quizAttempts).toHaveLength(0)
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
   it('GET /api/progress refleja intentos y accuracy', async () => {
-    await postQuiz({ subjectId: 'bio', answers: [{ question: 'q', chosen: 0 }], score: 2, total: 4 })
+    const mk = (q: string) => ({
+      kind: 'multiple' as const,
+      question: q,
+      options: ['a', 'b', 'c', 'd'],
+      answerIndex: 0,
+      explanation: 'e',
+    })
+    await postQuiz({
+      subjectId: 'bio',
+      items: [mk('q1'), mk('q2'), mk('q3'), mk('q4')],
+      answers: [0, 0, 1, 1],
+    })
     const res = await GETProgress(new Request('http://localhost/api/progress?subjectId=bio'))
     expect(res.status).toBe(200)
     const body = await res.json()
