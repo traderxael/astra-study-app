@@ -1,0 +1,157 @@
+// Astra Study — modelo de datos (Task 3, R-01: schema completo incl. User).
+//
+// Postgres en dev (Docker, docker-compose.yml) y en prod (Supabase).
+// Sin SQLite dual. Ver DATABASE_URL en .env.example.
+//
+// Scoping por dueño: userId es el id de sesión (Task 2: 'admin' para el
+// único usuario privado). Los índices por userId/subjectId se usan para
+// listar lo propio sin filtrar en memoria. Subject cascadea a File, Chunk,
+// Conversation, Flashcard, QuizAttempt y ProgressEvent.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Único usuario privado. La auth (Task 2) es por ADMIN_EMAIL /
+// ADMIN_PASSWORD_HASH sin DB; User es el registro canónico para deploy
+// y seed (Task 8). Las relaciones Subject/etc. usan userId string (no FK
+// a User) para que el id de sesión 'admin' funcione sin fila previa.
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Subject {
+  id             String          @id @default(cuid())
+  userId         String
+  name           String
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  files          File[]
+  chunks         Chunk[]
+  conversations  Conversation[]
+  flashcards     Flashcard[]
+  quizAttempts   QuizAttempt[]
+  progressEvents ProgressEvent[]
+
+  @@index([userId])
+}
+
+model File {
+  id        String   @id @default(cuid())
+  userId    String
+  subjectId String
+  name      String
+  mimeType  String
+  size      Int
+  status    String   @default("uploaded")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  subject   Subject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  chunks    Chunk[]
+
+  @@index([userId])
+  @@index([subjectId])
+  @@index([userId, subjectId])
+}
+
+model Chunk {
+  id         String   @id @default(cuid())
+  userId     String
+  subjectId  String
+  fileId     String
+  chunkIndex Int
+  content    String
+  tokenCount Int
+  createdAt  DateTime @default(now())
+  subject    Subject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  file       File     @relation(fields: [fileId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([subjectId])
+  @@index([fileId])
+  @@index([userId, subjectId])
+  @@index([fileId, chunkIndex])
+}
+
+model Conversation {
+  id        String    @id @default(cuid())
+  userId    String
+  subjectId String
+  title     String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  subject   Subject   @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  messages  Message[]
+
+  @@index([userId])
+  @@index([subjectId])
+  @@index([userId, subjectId])
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  role           String
+  content        String
+  createdAt      DateTime     @default(now())
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId])
+}
+
+model Flashcard {
+  id           String    @id @default(cuid())
+  userId       String
+  subjectId    String
+  front        String
+  back         String
+  source       String    @default("ai")
+  reviewCount  Int       @default(0)
+  nextReviewAt DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  subject      Subject   @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([subjectId])
+  @@index([userId, subjectId])
+}
+
+model QuizAttempt {
+  id        String   @id @default(cuid())
+  userId    String
+  subjectId String
+  score     Int
+  total     Int
+  answers   Json?
+  createdAt DateTime @default(now())
+  subject   Subject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([subjectId])
+  @@index([userId, subjectId])
+}
+
+model ProgressEvent {
+  id        String   @id @default(cuid())
+  userId    String
+  subjectId String
+  type      String
+  payload   Json?
+  createdAt DateTime @default(now())
+  subject   Subject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([subjectId])
+  @@index([userId, subjectId])
+  @@index([userId, type])
+}
