@@ -13,6 +13,7 @@
     "bcryptjs": "^3.0.3",
     "next": "15.5.0",
     "next-auth": "^5.0.0-beta.32",
+    "pdf-parse": "1.1.1",
     "react": "19.1.0",
     "react-dom": "19.1.0"
   },
