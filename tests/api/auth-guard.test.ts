@@ -31,12 +31,19 @@ vi.mock('../../lib/auth', async (importOriginal) => {
   }
 })
 
+import bcrypt from 'bcryptjs'
 import { requireSession } from '../../lib/auth-guard'
-import { login } from '../../lib/auth'
+import { login, verifyCredentials } from '../../lib/auth'
+
+// Las credenciales de test viven SOLO en el test (nunca en lib/auth.ts):
+// el runtime falla cerrado si ADMIN_* no están configuradas.
+const TEST_HASH = bcrypt.hashSync('test-pass', 4)
 
 describe('auth privada — guarda de rutas', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    process.env.ADMIN_EMAIL = 'estudio@local'
+    process.env.ADMIN_PASSWORD_HASH = TEST_HASH
   })
 
   it('ruta privada sin sesion redirige a /login (Review Focus 5)', async () => {
@@ -72,5 +79,29 @@ describe('auth privada — guarda de rutas', () => {
   it('login con email incorrecto no crea sesion', async () => {
     const res = await login({ email: 'otro@local', password: 'test-pass' })
     expect(res.status).toBe(401)
+  })
+
+  it('sin ADMIN_PASSWORD_HASH falla cerrado con error explicito (sin fallback)', async () => {
+    delete process.env.ADMIN_PASSWORD_HASH
+    await expect(
+      verifyCredentials('estudio@local', 'test-pass'),
+    ).rejects.toThrow(/ADMIN_PASSWORD_HASH/)
+    await expect(
+      login({ email: 'estudio@local', password: 'test-pass' }),
+    ).rejects.toThrow(/ADMIN_PASSWORD_HASH/)
+  })
+
+  it('ADMIN_PASSWORD_HASH vacio falla cerrado (placeholder .env.example)', async () => {
+    process.env.ADMIN_PASSWORD_HASH = ''
+    await expect(
+      verifyCredentials('estudio@local', 'test-pass'),
+    ).rejects.toThrow(/ADMIN_PASSWORD_HASH/)
+  })
+
+  it('sin ADMIN_EMAIL falla cerrado con error explicito', async () => {
+    delete process.env.ADMIN_EMAIL
+    await expect(
+      verifyCredentials('estudio@local', 'test-pass'),
+    ).rejects.toThrow(/ADMIN_EMAIL/)
   })
 })

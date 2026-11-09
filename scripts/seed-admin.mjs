@@ -18,29 +18,30 @@ console.log(`Admin email: ${email}`);
 console.log(`ADMIN_PASSWORD_HASH=${hash}`);
 console.log("Copia ADMIN_PASSWORD_HASH a tu .env (solo servidor, .env.local).");
 
-let prismaUpserted = false;
-
+let PrismaClient;
 try {
-  // Prisma llega en Task 3; si aún no está, solo se imprime el hash.
-  const { PrismaClient } = await import("@prisma/client");
-  const prisma = new PrismaClient();
-  try {
-    if (process.env.DATABASE_URL) {
-      await prisma.user.upsert({
-        where: { email },
-        update: { passwordHash: hash },
-        create: { email, passwordHash: hash, name: email },
-      });
-      prismaUpserted = true;
-      console.log(`Usuario ${email} creado/actualizado en la base de datos.`);
-    } else {
-      console.log("Sin DATABASE_URL: hash listo para ADMIN_PASSWORD_HASH.");
-    }
-  } finally {
-    await prisma.$disconnect();
-  }
+  // Prisma llega en Task 3; si aún no está, solo se imprime el hash (éxito).
+  ({ PrismaClient } = await import("@prisma/client"));
 } catch {
-  if (!prismaUpserted) {
-    console.log("Prisma/DB aún no disponible (Task 3): hash listo para ADMIN_PASSWORD_HASH.");
+  console.log("Prisma/DB aún no disponible (Task 3): hash listo para ADMIN_PASSWORD_HASH.");
+  process.exit(0);
+}
+
+const prisma = new PrismaClient();
+try {
+  if (process.env.DATABASE_URL) {
+    await prisma.user.upsert({
+      where: { email },
+      update: { passwordHash: hash },
+      create: { email, passwordHash: hash, name: email },
+    });
+    console.log(`Usuario ${email} creado/actualizado en la base de datos.`);
+  } else {
+    console.log("Sin DATABASE_URL: hash listo para ADMIN_PASSWORD_HASH.");
   }
+} catch (err) {
+  console.error(`Error creando admin en DB: ${err instanceof Error ? err.message : err}`);
+  process.exitCode = 1;
+} finally {
+  await prisma.$disconnect();
 }

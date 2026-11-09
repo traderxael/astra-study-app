@@ -10,17 +10,12 @@ import bcrypt from "bcryptjs";
  * scripts/seed-admin.mjs y sus credenciales viven en ADMIN_EMAIL /
  * ADMIN_PASSWORD_HASH (solo servidor, nunca en el cliente).
  *
- * Mientras Prisma (Task 3) no está disponible, la verificación se hace
- * contra esas variables de entorno con un fallback de desarrollo para el
- * admin sembrado (estudio@local / test-pass), así los tests de Task 2
- * pasan sin DB real (R-01).
+ * Falla cerrado: si ADMIN_EMAIL o ADMIN_PASSWORD_HASH faltan o están
+ * vacíos (como el placeholder "" de .env.example), verifyCredentials
+ * lanza un error explícito de misconfiguración en lugar de aceptar
+ * credenciales por defecto. Sin fallbacks en este módulo; los tests
+ * fijan sus propias variables de entorno (R-01, sin DB real).
  */
-
-// Hash bcrypt de "test-pass" (12 rondas $2b$10$); usado solo como fallback
-// de desarrollo cuando ADMIN_PASSWORD_HASH no está configurado.
-const DEFAULT_ADMIN_EMAIL = "estudio@local";
-const DEFAULT_ADMIN_PASSWORD_HASH =
-  "$2b$10$ty0TgG3Nc7S9PFRGcWgmfudh2msZLnRQv2JijLTCzSGHtq/IYZVEW";
 
 export interface AdminUser {
   id: string;
@@ -28,18 +23,27 @@ export interface AdminUser {
   name: string;
 }
 
+function getExpectedAdminCredentials(): { email: string; hash: string } {
+  const email = process.env.ADMIN_EMAIL?.trim();
+  const hash = process.env.ADMIN_PASSWORD_HASH?.trim();
+  if (!email || !hash) {
+    throw new Error(
+      "Auth misconfiguration: ADMIN_EMAIL and ADMIN_PASSWORD_HASH must be set (server-only env). Run scripts/seed-admin.mjs.",
+    );
+  }
+  return { email, hash };
+}
+
 export async function verifyCredentials(
   email: string,
   password: string,
 ): Promise<AdminUser | null> {
-  const expectedEmail = process.env.ADMIN_EMAIL ?? DEFAULT_ADMIN_EMAIL;
-  const expectedHash =
-    process.env.ADMIN_PASSWORD_HASH ?? DEFAULT_ADMIN_PASSWORD_HASH;
+  const expected = getExpectedAdminCredentials();
 
-  if (!email || email !== expectedEmail) return null;
+  if (!email || email !== expected.email) return null;
   if (!password) return null;
 
-  const ok = await bcrypt.compare(password, expectedHash);
+  const ok = await bcrypt.compare(password, expected.hash);
   if (!ok) return null;
 
   return { id: "admin", email, name: email };
@@ -52,9 +56,13 @@ export interface LoginResult {
 }
 
 /**
- * Helper de login testeable (R-01): valida credenciales con bcrypt y
- * devuelve 302 + sesión en éxito, 401 en fallo. La ruta real del navegador
- * usa POST /api/auth/callback/credentials (handlers de abajo).
+ * ⚠ TEST-ONLY / SYNTHETIC — no crea una sesión NextAuth real.
+ *
+ * Helper sintético para tests (R-01): valida credenciales con bcrypt y
+ * devuelve 302 + un objeto `session` construido a mano (sin cookies, sin
+ * JWT, sin paso por NextAuth) en éxito, 401 en fallo. NUNCA confundir su
+ * `session` con una sesión autenticada. La ruta real del navegador usa
+ * POST /api/auth/callback/credentials (handlers de abajo).
  */
 export async function login({
   email,
