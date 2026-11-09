@@ -1,8 +1,10 @@
-export default function Home() {
-  return (
-    <main>
-      <h1>Astra Study</h1>
-      <p>Tu espacio personal de estudio.</p>
-    </main>
-  );
+import { redirect } from "next/navigation";
+import { auth } from "../lib/auth";
+
+export default async function Home() {
+  const session = await auth();
+  if (session?.user?.id) {
+    redirect("/chat");
+  }
+  redirect("/login");
 }
