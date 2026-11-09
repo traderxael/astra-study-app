@@ -270,7 +270,9 @@ export async function summarize(input: SummaryInput): Promise<SummaryOutput> {
     return { summary: NO_MATERIAL_MESSAGE, citations: [] };
   }
   requireApiKey();
-  const stream = await chatCompletion(buildSummaryMessages(buildContext(chunks)));
+  const stream = await chatCompletion(
+    buildSummaryMessages(buildContext(chunks), input.topic),
+  );
   const summary = (await readStreamText(stream)).trim();
   return { summary, citations: toCitations(chunks) };
 }
@@ -282,7 +284,11 @@ export async function generateFlashcards(
   if (chunks.length === 0) return [];
   requireApiKey();
   const stream = await chatCompletion(
-    buildFlashcardsMessages(buildContext(chunks), clampCount(input.count)),
+    buildFlashcardsMessages(
+      buildContext(chunks),
+      clampCount(input.count),
+      input.topic,
+    ),
   );
   return toFlashcards(extractJsonArray(await readStreamText(stream)));
 }
@@ -292,7 +298,7 @@ export async function generateQuiz(input: QuizInput): Promise<QuizItem[]> {
   if (chunks.length === 0) return [];
   requireApiKey();
   const stream = await chatCompletion(
-    buildQuizMessages(buildContext(chunks), clampCount(input.count)),
+    buildQuizMessages(buildContext(chunks), clampCount(input.count), input.topic),
   );
   return toQuizItems(extractJsonArray(await readStreamText(stream)));
 }

@@ -80,8 +80,9 @@ Costo y backups:
   gasto realista es OpenAI (`gpt-4o-mini`, respuestas cortas sobre tus
   chunks): céntimos por sesión de estudio. Sin tráfico público, el
   free tier sobra.
-- **Backup:** Supabase free incluye backups diarios automáticos (7 días
-  de retención). Para descargas manuales:
+- **Backup:** Respaldo según plan vigente de Supabase al momento del deploy;
+  verificá en Dashboard → Backups (los backups no sustituyen tu pg_dump).
+  Para descargas manuales:
   `pg_dump "$DATABASE_URL" > astra-backup-$(date +%F).sql`
   (requiere `postgresql-client` local).
 

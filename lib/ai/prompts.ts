@@ -58,10 +58,13 @@ export const SUMMARIZER_SYSTEM_PROMPT = [
   "Terminá con una línea 'Citas: [n], [m]' con los números de bloque usados.",
 ].join(" ");
 
-export function buildSummaryMessages(context: string): ChatMessage[] {
+export function buildSummaryMessages(
+  context: string,
+  topic: string,
+): ChatMessage[] {
   return [
     { role: "system", content: SUMMARIZER_SYSTEM_PROMPT },
-    { role: "user", content: `Material:\n${context}` },
+    { role: "user", content: `Tema: ${topic}\nMaterial:\n${context}` },
   ];
 }
 
@@ -75,12 +78,13 @@ export const FLASHCARDS_SYSTEM_PROMPT = [
 export function buildFlashcardsMessages(
   context: string,
   count: number,
+  topic: string,
 ): ChatMessage[] {
   return [
     { role: "system", content: FLASHCARDS_SYSTEM_PROMPT },
     {
       role: "user",
-      content: `Material:\n${context}\n\nGenerá ${count} tarjetas.`,
+      content: `Tema: ${topic}\nMaterial:\n${context}\n\nGenerá ${count} tarjetas.`,
     },
   ];
 }
@@ -94,12 +98,16 @@ export const QUIZ_SYSTEM_PROMPT = [
   "Nada inventado: todo sale del material.",
 ].join(" ");
 
-export function buildQuizMessages(context: string, count: number): ChatMessage[] {
+export function buildQuizMessages(
+  context: string,
+  count: number,
+  topic: string,
+): ChatMessage[] {
   return [
     { role: "system", content: QUIZ_SYSTEM_PROMPT },
     {
       role: "user",
-      content: `Material:\n${context}\n\nGenerá ${count} preguntas mezclando opción múltiple y abierta corta.`,
+      content: `Tema: ${topic}\nMaterial:\n${context}\n\nGenerá ${count} preguntas mezclando opción múltiple y abierta corta.`,
     },
   ];
 }

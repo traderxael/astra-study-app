@@ -41,7 +41,8 @@ export function buildStoragePath(
 ): string {
   const user = cleanSegment(userId, "user");
   const subject = cleanSegment(subjectId, "subject");
-  return `${user}/${subject}/${cleanFilename(filename)}`;
+  const suffix = randomUUID().slice(0, 8);
+  return `${user}/${subject}/${cleanFilename(filename)}-${suffix}`;
 }
 
 type FileLike = FileUpload & { arrayBuffer: () => Promise<ArrayBuffer> };
