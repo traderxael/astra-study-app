@@ -8,6 +8,7 @@
 // Cuando Prisma + DATABASE_URL estén disponibles (Task 3) hace upsert del
 // usuario. Nunca imprime la contraseña en claro más que como default local.
 import bcrypt from "bcryptjs";
+import { formatEnvAssignment } from "../lib/env-value.mjs";
 
 const email = process.env.ADMIN_EMAIL ?? "estudio@local";
 const password = process.env.ADMIN_PASSWORD ?? "test-pass";
@@ -15,8 +16,10 @@ const password = process.env.ADMIN_PASSWORD ?? "test-pass";
 const hash = bcrypt.hashSync(password, 10);
 
 console.log(`Admin email: ${email}`);
-console.log(`ADMIN_PASSWORD_HASH=${hash}`);
-console.log("Copia ADMIN_PASSWORD_HASH a tu .env (solo servidor, .env.local).");
+// La línea va escapada (los `$` del hash bcrypt se expandirían al cargar
+// el .env y el login fallaría con CredentialsSignin). Pegala tal cual.
+console.log(formatEnvAssignment("ADMIN_PASSWORD_HASH", hash));
+console.log("Copia esa línea a tu .env.local (solo servidor).");
 
 let PrismaClient;
 try {

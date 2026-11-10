@@ -12,21 +12,64 @@ Requisitos: Node 20+, Docker (para Postgres local).
 ```bash
 docker compose up -d                 # Postgres local en :5432
 cp .env.example .env.local           # ajusta valores (nunca commitees .env.local)
+node scripts/create-db.mjs           # crea la base "astra_study" si no existe
 npx prisma migrate deploy            # o: npx prisma db push
 ADMIN_EMAIL=estudio@local ADMIN_PASSWORD=test-pass node scripts/seed-admin.mjs
 npm run dev                          # http://localhost:3000
 ```
 
-El seed genera el hash bcrypt (cópialo a `ADMIN_PASSWORD_HASH` en
-`.env.local`) y crea la fila `User` + la materia por defecto
+> **Importante:** `scripts/seed-admin.mjs` imprime la línea
+> `ADMIN_PASSWORD_HASH="\$2b\$10\$..."` **ya escapada**. Copiala tal cual a
+> `.env.local`. Si pegás el hash crudo, Next.js (dotenv-expand) interpreta
+> los `$` como variables, el hash llega mutilado al servidor y el login
+> falla con `CredentialsSignin` sin mensaje claro.
+
+El seed también crea la fila `User` + la materia por defecto
 (`ADMIN_DEFAULT_SUBJECT`, por defecto "Biología"). La sesión usa el
 userId `"admin"` (ver `lib/auth.ts`): la auth es env-based
 (`ADMIN_EMAIL` / `ADMIN_PASSWORD_HASH`), no hay tabla de usuarios con
 contraseña.
 
+Fuera de Vercel, `AUTH_TRUST_HOST="true"` es obligatorio: sin eso, Auth.js
+responde `UntrustedHost` en `/api/auth/*` (en Vercel se detecta solo).
+
 Sin Supabase, el storage cae a disco local bajo `STORAGE_DIR`
 (por defecto `.data/uploads`); sin `OPENAI_API_KEY`, las rutas de IA
 responden 503 degradado `{ error: "IA no configurada" }`.
+
+### Sin Docker: Postgres embebido (Windows/Linux)
+
+Si no tenés Docker, el repo trae `embedded-postgres` como devDependency
+(un Postgres portable que se descarga con npm):
+
+```bash
+node scripts/create-db.mjs
+npx prisma migrate deploy
+```
+
+Los binarios están en `node_modules/@embedded-postgres/<plataforma>/native`;
+en Windows se levantan con `pg_ctl` (el path debe incluir `native\bin` en
+el `PATH` para que los procesos hijos carguen sus DLL).
+
+### Probar la IA sin gastar tokens
+
+`scripts/local-ai-stub.mjs` levanta un endpoint compatible con OpenAI
+(`/v1/chat/completions`) que devuelve respuestas deterministas, útil para
+desarrollar y para el smoke E2E:
+
+```bash
+node scripts/local-ai-stub.mjs        # 127.0.0.1:4010
+# en .env.local:
+# OPENAI_API_KEY="stub-local"
+# OPENAI_BASE_URL="http://127.0.0.1:4010/v1"
+```
+
+### Comprobaciones rápidas
+
+```bash
+node scripts/check-e2e.mjs            # login -> chat -> upload -> fichas/quiz por HTTP
+node scripts/screenshots.mjs          # capturas de las 5 pantallas en .data/screenshots
+```
 
 ## Smoke E2E
 
@@ -69,7 +112,7 @@ Checklist:
 | 4 | Migrar | `DATABASE_URL=... npx prisma migrate deploy` desde tu máquina o en CI. |
 | 5 | Subir a Vercel | Importa el repo en Vercel → framework Next.js (sin build custom). |
 | 6 | Variables de entorno (Vercel) | `DATABASE_URL`, `NEXTAUTH_SECRET` (genera: `openssl rand -base64 32`), `NEXTAUTH_URL=https://TU-URL-PRIVADA`, `OPENAI_API_KEY`, `ADMIN_EMAIL`, `ADMIN_PASSWORD_HASH`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`. |
-| 7 | Sembrar el admin | En local con la `DATABASE_URL` de Supabase: `ADMIN_EMAIL=estudio@local ADMIN_PASSWORD=... node scripts/seed-admin.mjs` y pega el hash impreso en `ADMIN_PASSWORD_HASH` (Vercel). |
+| 7 | Sembrar el admin | En local con la `DATABASE_URL` de Supabase: `ADMIN_EMAIL=estudio@local ADMIN_PASSWORD=... node scripts/seed-admin.mjs` y pega la línea `ADMIN_PASSWORD_HASH="\$2b\$..."` **tal cual** (escapada) en Vercel. |
 | 8 | Deploy | `vercel --prod` o push a la rama configurada. |
 | 9 | Verificar | Abre `https://TU-URL-PRIVADA/login` desde cualquier navegador → login → sube un .txt en `/chat` → pregunta → cita visible. Opcional: `E2E_BASE_URL=https://TU-URL-PRIVADA npm run test:e2e`. |
 | 10 | Acceso privado | No hay registro público: el login es una sola cuenta. No compartas la URL; si quieres, protégela además con Vercel Deployment Protection (password) en **Settings → Deployment Protection**. |
@@ -90,7 +133,7 @@ Costo y backups:
 
 Ver [`.env.example`](.env.example) para la lista completa con valores
 finales: `DATABASE_URL`, `NEXTAUTH_SECRET`, `NEXTAUTH_URL`,
-`OPENAI_API_KEY`, `OPENAI_BASE_URL`, `ADMIN_EMAIL`,
+`AUTH_TRUST_HOST`, `OPENAI_API_KEY`, `OPENAI_BASE_URL`, `ADMIN_EMAIL`,
 `ADMIN_PASSWORD_HASH`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`,
 `SUPABASE_BUCKET`, `STORAGE_DIR`.
 
