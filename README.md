@@ -18,6 +18,9 @@ ADMIN_EMAIL=estudio@local ADMIN_PASSWORD=test-pass node scripts/seed-admin.mjs
 npm run dev                          # http://localhost:3000
 ```
 
+En Windows, `.\scripts\start-local.ps1` levanta todo de una vez
+(Postgres embebido + stub de IA + migraciones + seed + app).
+
 > **Importante:** `scripts/seed-admin.mjs` imprime la línea
 > `ADMIN_PASSWORD_HASH="\$2b\$10\$..."` **ya escapada**. Copiala tal cual a
 > `.env.local`. Si pegás el hash crudo, Next.js (dotenv-expand) interpreta
