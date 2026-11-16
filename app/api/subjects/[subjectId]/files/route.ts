@@ -11,6 +11,7 @@
  */
 import { requireSession } from "../../../../../lib/auth-guard";
 import { prisma } from "../../../../../lib/db";
+import { trackTask } from "../../../../../lib/track";
 import {
   extractText,
   ScannedPdfError,
@@ -125,6 +126,9 @@ export async function POST(
       { status: 500 },
     );
   }
+
+  // Evento normalizado (Task 9): sin PII, para métricas/cuota.
+  await trackTask(userId, subjectId, "upload", { chunks: pieces.length, size });
 
   return Response.json(
     {

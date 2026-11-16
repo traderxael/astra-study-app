@@ -1,18 +1,33 @@
-/* Astra Study — estilos globales sobrios y responsivos (Task 8).
-   Sin dependencias externas: tipografía del sistema, paleta neutra,
-   layout de una columna en móvil y ancho contenido en escritorio. */
+/* Astra Study — tema oscuro (Task 9).
+ *
+ * Paridad visual con Astra AI (app.astra-ai.co):
+ *   --bg #0d0d0d (su background_color/theme_color), superficie #1a1a1a,
+ *   texto #f2f2f2, acentos azul violeta, radios redondeados, tipografía
+ *   system + fallback. Responsive, una columna en móvil.
+ *
+ * Variables design-token para que los componentes nuevos (dashboard,
+ * shells) no hardcodeden colores.
+ */
 
 :root {
-  --bg: #f7f7f5;
-  --surface: #ffffff;
-  --ink: #1c1e21;
-  --muted: #5f6368;
-  --line: #e0e0dc;
-  --accent: #2f6fed;
+  --bg: #0d0d0d;
+  --bg-elev: #161616;
+  --surface: #1a1a1a;
+  --surface-2: #222222;
+  --ink: #f2f2f2;
+  --ink-dim: #a8a8a8;
+  --muted: #8a8a8a;
+  --line: #2c2c2c;
+  --accent: #6c5ce7;
+  --accent-2: #4cc2ff;
   --accent-ink: #ffffff;
-  --danger: #b3261e;
-  --radius: 10px;
-  --max: 880px;
+  --good: #3fd07f;
+  --warn: #ffb347;
+  --danger: #ff6b6b;
+  --radius: 12px;
+  --radius-sm: 8px;
+  --max: 900px;
+  --shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
 }
 
 *,
@@ -23,17 +38,20 @@
 
 html {
   -webkit-text-size-adjust: 100%;
+  color-scheme: dark;
 }
 
 body {
   margin: 0;
-  background: var(--bg);
+  background: radial-gradient(1200px 600px at 50% -10%, #1a1a2e 0%, var(--bg) 55%) no-repeat,
+    var(--bg);
   color: var(--ink);
   font-family:
-    system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial,
-    sans-serif;
+    "Jersey 10", "Figtree", system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
   font-size: 16px;
   line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
 }
 
 main {
@@ -43,25 +61,44 @@ main {
 }
 
 h1 {
-  font-size: 1.5rem;
-  margin: 0 0 0.5rem;
+  font-size: 1.6rem;
+  letter-spacing: -0.01em;
+  margin: 0 0 0.4rem;
 }
 
 h2 {
   font-size: 1.15rem;
-  margin: 1.25rem 0 0.5rem;
+  margin: 1.4rem 0 0.5rem;
+}
+
+h3 {
+  font-size: 1rem;
+  margin: 1rem 0 0.35rem;
+  color: var(--ink-dim);
 }
 
 p {
   margin: 0.5rem 0;
+  color: var(--ink);
 }
 
-section[aria-label="Tutor"] {
+a {
+  color: var(--accent-2);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+section[aria-label="Tutor"],
+.card {
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  padding: 1rem;
+  padding: 1rem 1.1rem;
   margin-top: 1rem;
+  box-shadow: var(--shadow);
 }
 
 label {
@@ -79,55 +116,100 @@ select,
 textarea {
   display: block;
   width: 100%;
-  margin-top: 0.25rem;
-  padding: 0.6rem 0.75rem;
+  margin-top: 0.3rem;
+  padding: 0.7rem 0.85rem;
   font: inherit;
   color: var(--ink);
-  background: var(--surface);
+  background: var(--bg-elev);
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(108, 92, 231, 0.22);
 }
 
 input[type="file"] {
   display: block;
   width: 100%;
-  margin-top: 0.25rem;
+  margin-top: 0.3rem;
   font-size: 0.9rem;
+  color: var(--ink-dim);
+}
+
+input[type="file"]::file-selector-button {
+  font: inherit;
+  color: var(--ink);
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 0.45rem 0.8rem;
+  margin-right: 0.7rem;
+  cursor: pointer;
 }
 
 button {
   font: inherit;
   cursor: pointer;
-  padding: 0.6rem 1.1rem;
+  padding: 0.68rem 1.2rem;
   border: 0;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   background: var(--accent);
   color: var(--accent-ink);
-  margin-top: 0.25rem;
+  margin-top: 0.3rem;
+  font-weight: 600;
+  transition: transform 0.05s ease, filter 0.15s ease;
+}
+
+button:hover {
+  filter: brightness(1.08);
+}
+
+button:active {
+  transform: translateY(1px);
 }
 
 button:disabled {
-  opacity: 0.55;
+  opacity: 0.5;
   cursor: not-allowed;
 }
 
-a {
-  color: var(--accent);
+button.ghost {
+  background: transparent;
+  color: var(--ink);
+  border: 1px solid var(--line);
+}
+
+button.ghost:hover {
+  border-color: var(--accent);
 }
 
 [role="alert"] {
   color: var(--danger);
+  background: rgba(255, 107, 107, 0.08);
+  border: 1px solid rgba(255, 107, 107, 0.3);
+  padding: 0.55rem 0.8rem;
+  border-radius: var(--radius-sm);
 }
 
 article {
-  padding: 0.75rem 0;
+  padding: 0.85rem 0;
   border-bottom: 1px solid var(--line);
 }
 
+article:last-child {
+  border-bottom: 0;
+}
+
 article ul {
-  margin: 0.25rem 0 0;
+  margin: 0.35rem 0 0;
   padding-left: 1.1rem;
-  color: var(--muted);
+  color: var(--ink-dim);
   font-size: 0.9rem;
 }
 
@@ -136,7 +218,122 @@ nav ul {
   padding: 0;
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem 1rem;
+  gap: 0.5rem 0.6rem;
+}
+
+nav a,
+nav button {
+  display: inline-block;
+  padding: 0.4rem 0.8rem;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink-dim);
+  font-size: 0.9rem;
+}
+
+nav a.active,
+nav button.active {
+  border-color: var(--accent);
+  color: var(--ink);
+  background: rgba(108, 92, 231, 0.16);
+}
+
+/* --- Componentes de dashboard (Task 9) --- */
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+  margin: 1rem 0;
+}
+
+.stat {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 1rem 1.1rem;
+}
+
+.stat .k {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--muted);
+  margin-bottom: 0.35rem;
+}
+
+.stat .v {
+  font-size: 1.7rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.stat .v small {
+  font-size: 0.8rem;
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink-dim);
+  margin: 0.2rem 0.3rem 0.2rem 0;
+}
+
+.badge.on {
+  border-color: rgba(63, 208, 127, 0.5);
+  background: rgba(63, 208, 127, 0.12);
+  color: var(--good);
+}
+
+.badge.off {
+  opacity: 0.5;
+  filter: grayscale(0.6);
+}
+
+.bar {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  overflow: hidden;
+  margin: 0.4rem 0 0.2rem;
+}
+
+.bar > i {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.pill {
+  display: inline-block;
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.pill.ok {
+  background: rgba(63, 208, 127, 0.14);
+  color: var(--good);
+}
+
+.pill.warn {
+  background: rgba(255, 179, 71, 0.14);
+  color: var(--warn);
 }
 
 @media (min-width: 640px) {

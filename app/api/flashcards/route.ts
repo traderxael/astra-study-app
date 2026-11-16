@@ -17,6 +17,7 @@
  */
 import { requireSession } from "../../../lib/auth-guard";
 import { prisma } from "../../../lib/db";
+import { trackTask } from "../../../lib/track";
 import {
   isAiConfigured,
   AiNotConfiguredError,
@@ -90,6 +91,11 @@ export async function POST(request: Request): Promise<Response> {
       }
     } catch (err) {
       console.error("flashcards persist failed", err);
+    }
+
+    // Evento normalizado (Task 9): sin PII, para métricas/cuota.
+    if (cards.length > 0) {
+      await trackTask(userId, subjectId, "flashcard", { count: cards.length });
     }
 
     return Response.json(cards);

@@ -12,6 +12,7 @@ import { requireSession } from "../../../../lib/auth-guard";
 import { prisma } from "../../../../lib/db";
 import { isAiConfigured, AiNotConfiguredError, AiRateLimitError, AiUpstreamError } from "../../../../lib/ai/provider";
 import { summarize } from "../../../../lib/ai/tutor";
+import { trackTask } from "../../../../lib/track";
 
 export async function POST(request: Request): Promise<Response> {
   const session = await requireSession();
@@ -46,6 +47,8 @@ export async function POST(request: Request): Promise<Response> {
 
   try {
     const out = await summarize({ subjectId, topic });
+    // Evento normalizado (Task 9): sin PII, para métricas/cuota.
+    await trackTask(userId, subjectId, "generation", { kind: "summary" });
     return Response.json(out);
   } catch (err) {
     if (err instanceof AiNotConfiguredError) {

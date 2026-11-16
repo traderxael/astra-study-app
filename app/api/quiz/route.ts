@@ -26,6 +26,7 @@
  */
 import { requireSession } from "../../../lib/auth-guard";
 import { prisma } from "../../../lib/db";
+import { trackTask } from "../../../lib/track";
 import {
   isAiConfigured,
   AiNotConfiguredError,
@@ -113,6 +114,9 @@ export async function POST(request: Request): Promise<Response> {
   if (typeof subjectId !== "string" || !subjectId.trim()) {
     return Response.json({ error: "falta subjectId" }, { status: 400 });
   }
+  // A partir de acá subjectId es string (validado arriba): fijamos el tipo
+  // para el resto del handler (trackTask exige string).
+  const subjectIdStr: string = subjectId;
 
   // Modo práctica: calificación server-side contra los items generados.
   if (answers !== undefined || rawItems !== undefined) {
@@ -201,6 +205,9 @@ export async function POST(request: Request): Promise<Response> {
       console.error("quiz attempt persist failed", err);
       return Response.json({ id: null, score, total, graded: total > 0 }, { status: 201 });
     }
+
+    // Evento normalizado (Task 9): sin PII, para métricas/cuota.
+    await trackTask(userId, subjectIdStr, "quiz", { score, total, graded: total > 0 });
   }
 
   // Modo generación.
@@ -251,6 +258,14 @@ export async function POST(request: Request): Promise<Response> {
       }
     } catch (err) {
       console.error("quiz generate persist failed", err);
+    }
+
+    // Evento normalizado (Task 9): sin PII, para métricas/cuota.
+    if (quizItems.length > 0) {
+      await trackTask(userId, subjectId, "generation", {
+        kind: "quiz",
+        count: quizItems.length,
+      });
     }
 
     return Response.json(quizItems);

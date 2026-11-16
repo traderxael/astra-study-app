@@ -25,6 +25,7 @@ import { prisma } from "../../../lib/db";
 import { isAiConfigured, AiNotConfiguredError, AiRateLimitError, AiUpstreamError } from "../../../lib/ai/provider";
 import { askTutor, askTutorStream } from "../../../lib/ai/tutor";
 import type { Citation } from "../../../lib/ai/tutor";
+import { trackTask } from "../../../lib/track";
 
 export type ChatCitation = Citation & { snippet?: string };
 
@@ -37,9 +38,9 @@ async function withSnippets(citations: Citation[], userId: string): Promise<Chat
   if (!citations.length) return citations;
   try {
     const ids = citations.map((c) => c.chunkId);
-    const rows = await prisma.chunk.findMany({
+    const rows = (await prisma.chunk.findMany({
       where: { id: { in: ids }, userId } as never,
-    });
+    })) as Array<{ id: string; content: string }>;
     if (!rows || rows.length === 0) return citations;
     const byId = new Map(rows.map((r) => [r.id, r.content]));
     return citations.map((c) => {
@@ -123,6 +124,12 @@ async function persistChat(
   } catch (err) {
     console.error("persistChat failed", err);
   }
+  // Evento normalizado (Task 9): se registra aparte para no fallar la
+  // respuesta del tutor. Sin PII (lib/evlog filtra user*).
+  await trackTask(userId, subjectId, "chat", {
+    citations: citations.length,
+    fileScoped: citations.some((c) => c.fileId),
+  });
 }
 
 function errorResponse(err: unknown): Response | null {

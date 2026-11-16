@@ -5,6 +5,25 @@ digital), el tutor responde con citas a los fragmentos, y generas
 flashcards y quizzes sobre ese material. Una sola persona, sin registro
 público.
 
+> **[Abrir la app](https://astra-study-app.vercel.app)** · [Repositorio](https://github.com/traderxael/astra-study-app)
+
+## Novedades (v2 — Task 9)
+
+Diseño y features alineadas con Astra AI (`app.astra-ai.co`), con el
+análisis en [`re/astra-ai/`](re/astra-ai/ANALISIS.md):
+
+- **Tema oscuro** (`#0d0d0d`, como su manifest) + **PWA instalable**
+   (`/manifest.webmanifest`) + tipografía y componentes con design tokens.
+- **Dashboard de progreso** completo: racha, nivel + estrellas, logros
+   (badges), desglose de actividad, precisión y documentos.
+- **Cuota por acción** (`lib/quota.ts`): cada tipo de uso tiene su tope
+   mensual y la UI avisa "Consume más de tu límite mensual".
+- **Pipeline de eventos propio** (`lib/evlog.ts`): tipado y **sin PII**
+   (a diferencia del de Astra, que manda email/nombre en cada evento).
+- **API de métricas** (`GET /api/metrics?subjectId=`) para widgets y
+   futuros clientes.
+- Cabeceras de seguridad en `vercel.json` (nosniff, frame-deny, etc.).
+
 ## Desarrollo local
 
 Requisitos: Node 20+, Docker (para Postgres local).
