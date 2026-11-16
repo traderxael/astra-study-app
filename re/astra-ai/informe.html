@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8">
+<title>RE — Astra AI (app.astra-ai.co)</title><style>
+:root{--bg:#0b0f14;--card:#131a23;--line:#243040;--fg:#e6edf3;--dim:#8b9bb0;
+--acc:#4cc2ff;--ok:#3fd07f;--warn:#ffb347;--bad:#ff6b6b;--vio:#b98cff}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.55 "Segoe UI",system-ui,sans-serif}
+.wrap{max-width:1180px;margin:0 auto;padding:28px 34px 60px}
+h1{font-size:27px;margin:0 0 4px;letter-spacing:-.4px}
+h2{font-size:18px;margin:36px 0 12px;padding-bottom:7px;border-bottom:1px solid var(--line);color:var(--acc)}
+.sub{color:var(--dim);font-size:13px;margin-bottom:20px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:11px;margin:14px 0}
+.card{background:var(--card);border:1px solid var(--line);border-radius:9px;padding:13px 15px}
+.card .k{font-size:10.5px;text-transform:uppercase;letter-spacing:.9px;color:var(--dim);margin-bottom:5px}
+.card .v{font-size:15px;font-weight:600;word-break:break-all}
+.card .v.sm{font-size:11px;font-family:Consolas,monospace;font-weight:400}
+table{width:100%;border-collapse:collapse;margin:12px 0;font-size:12.5px}
+th{text-align:left;color:var(--dim);font-weight:600;padding:7px 9px;border-bottom:1px solid var(--line);text-transform:uppercase;font-size:10.5px;letter-spacing:.7px}
+td{padding:7px 9px;border-bottom:1px solid #1a2431;vertical-align:top}
+code,.mono{font-family:Consolas,monospace;font-size:11.5px;color:#9fd6ff}
+pre{background:#0d1319;border:1px solid var(--line);border-left:3px solid var(--acc);border-radius:6px;padding:11px 13px;overflow-x:auto;font-size:11.5px}
+.note{background:#131a23;border:1px solid var(--line);border-radius:8px;padding:12px 15px;margin:14px 0}
+.note b{color:var(--acc)}
+.pill{display:inline-block;padding:1px 7px;border-radius:4px;font-size:10.5px;font-weight:600}
+.pill.red{background:#3a1515;color:#ff8f8f}.pill.amber{background:#3a2d15;color:#ffce7a}
+.pill.blue{background:#15303a;color:#7fd8ff}.pill.green{background:#12301f;color:#7fe3a8}
+.shots{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:13px;margin:16px 0}
+.shots figure{margin:0;background:#0f151c;border:1px solid var(--line);border-radius:9px;padding:9px}
+.shots img{width:100%;display:block;border-radius:5px;border:1px solid #1c2735}
+.shots figcaption{color:var(--dim);font-size:11px;margin-top:7px}
+footer{margin-top:40px;padding-top:16px;border-top:1px solid var(--line);color:var(--dim);font-size:11.5px}
+</style></head><body><div class="wrap">
+<h1>Engineering reverse: <span style="color:var(--acc)">Astra AI</span></h1>
+<div class="sub"><code>app.astra-ai.co</code> · PWA instalada en Brave · “Tu tutor de IA 24/7 para todas las materias”<br>
+Ingeniería inversa estática + captura de red en vivo sobre la sesión autenticada · toolchain 100% libre</div>
+
+<div class="grid">
+  <div class="card"><div class="k">Stack</div><div class="v sm">Next.js 15 (Turbopack) + tRPC v10</div></div>
+  <div class="card"><div class="k">Auth</div><div class="v sm">Better Auth · apiVersion 7</div></div>
+  <div class="card"><div class="k">Bundle analizado</div><div class="v">39 chunks · 2,01 MB</div></div>
+  <div class="card"><div class="k">Procedimientos tRPC</div><div class="v">38 endpoints</div></div>
+  <div class="card"><div class="k">Telemetría propia</div><div class="v bad">evlog con PII</div></div>
+  <div class="card"><div class="k">Entornos filtrados</div><div class="v bad">admin · staging · R2</div></div>
+</div>
+
+<h2>1 · Qué es</h2>
+<div class="note">
+<b>Tutor de preparación del PAES</b> (examen de acceso a la universidad en Chile). Rutas: cuestionarios,
+<b>examen oral simulado</b>, examen escrito, tarjetas de memoria, podcast, duelos, rachas e insignias.
+Modelo de negocio: suscripción con <b>cuota mensual de uso</b> (“Consume más de tu límite mensual”).
+<br><br>
+Manifest: <code>{"name":"Astra AI","description":"The most advanced AI math tutor","start_url":"/onboarding","display":"standalone"}</code>
+</div>
+
+<h2>2 · La app funcionando</h2>
+<div class="shots">
+  <figure><img src="screens/astra-chat.png"><figcaption>Home: 17 días para el examen, nivel de preparación, PAES Historia</figcaption></figure>
+  <figure><img src="screens/astra-chat-sent.png"><figcaption>Tutor: “Pregúntale lo que quieras a tu tutor”</figcaption></figure>
+  <figure><img src="screens/astra-chat-conv.png"><figcaption>Prueba real: “2+2=4” con seguimiento y cuota mensual</figcaption></figure>
+</div>
+
+<h2>3 · Superficie de API (tRPC, descubierta en runtime)</h2>
+<table>
+<tr><th>Router</th><th>Procedimientos</th></tr>
+<tr><td>Perfil / cuenta</td><td><code>profile.getProfile</code> · <code>profile.updateDeviceIdentifiers</code> · <code>auth.saveYourAccount</code> · <code>marketingConsent.get</code></td></tr>
+<tr><td>Contenido / tutor</td><td><code>artifacts.getStateByChat</code> · <code>appVersion.checkForUpdates</code></td></tr>
+<tr><td>Producto / upsell</td><td><code>subscriptions.getOwn</code> · <code>usage.getActionAccessStatus</code> · <code>usage.getSubscriptionTopUpClaimStatus</code> · <code>limits.getOwn</code> · <code>firstTimePromotion.*</code> · <code>banners.list</code> · <code>productUpdates.feed</code></td></tr>
+<tr><td>Gamificación</td><td><code>streak.getStreak</code> · <code>streak.getTodayStatus</code> · <code>stars.summary</code> · <code>badges.list</code> · <code>duel.today</code> · <code>duel.replyNotice</code> · <code>challenges.replyNotice</code></td></tr>
+<tr><td>Social / soporte</td><td><code>subjects.list</code> · <code>userNotifications.getPendingNotifications</code> · <code>support.getStaffConversationSummary</code> · <code>file.upload</code></td></tr>
+</table>
+<p class="mono" style="color:var(--dim)">Endpoints propios: /api/trpc/* · /api/auth/get-session · <span style="color:#ff8f8f">/api/evlog/ingest</span> · /api/i18n/es-MX · /api/e (Vercel)</p>
+
+<h2>4 · Qué sale de tu navegador</h2>
+<h3>Pipeline propio “evlog” (primera parte) — el que más importa</h3>
+<pre><code>POST /api/evlog/ingest      batch de 10 · backoff 1s→30s · navigator.sendBeacon
+campos: event eventName payload timestamp channel environment level service href
+        user_email  user_id  user_name  user_info      <-- PII en cada evento</code></pre>
+<table>
+<tr><th>SDK</th><th>Identificador</th><th>Qué manda</th><th>Estado en runtime</th></tr>
+<tr><td><b>Sentry</b></td><td>org <code>4507621849235456</code> · key <code>157672002bf72e1c8cfdb41f3242aa6d</code></td>
+<td>errores, session replay, reports de CSP</td><td><span class="pill green">bloqueado por Brave</span></td></tr>
+<tr><td><b>PostHog</b></td><td><code>f7ad4b3a46642aa720687b4c4659b475</code></td><td>eventos de producto</td><td><span class="pill amber">cookie ph_phc</span></td></tr>
+<tr><td><b>Singular</b></td><td><code>astra_ai_9becea26</code> · <code>com.astra-ai.web</code></td>
+<td>device id, usuario, atribución, timezone, pantalla, SO, URL</td><td><span class="pill green">bloqueado por Brave</span></td></tr>
+<tr><td><b>GA4 / GTM</b></td><td><code>G-BYYKE1LW9M</code> · <code>GTM-WJ5ZPX4V</code></td><td>métricas + advertising signals</td><td><span class="pill amber">permitido por CSP</span></td></tr>
+<tr><td><b>Vercel Analytics</b></td><td><code>/api/e</code></td><td>web vitals</td><td><span class="pill amber">enviado</span></td></tr>
+</table>
+<div class="note">
+<b>La CSP permite Google Ads, DoubleClick, Facebook, TikTok, Stripe, Trusted Shops, GeoGebra y YouTube</b> —
+aunque el bundle trae su propia regex de bloqueo de trackers (por eso Hotjar y Clarity no se cargan).
+Y lo importante: en runtime Brave bloqueó Sentry y Singular, pero el <b>evlog propio sí sale</b>:
+va a su propio dominio con tu email, nombre e id.
+</div>
+
+<h2>5 · Hallazgos técnicos</h2>
+<table>
+<tr><th>#</th><th>Hallazgo</th></tr>
+<tr><td>1</td><td><b>Entornos administrativos en el bundle de producción</b>: <code>admin.astra-ai.co</code>, <code>sadmin.astra-ai.co</code>, <code>staging.astra-ai.co</code> y el bucket R2 con URL pública de dev.</td></tr>
+<tr><td>2</td><td><b>PII en cada evento propio</b>: <code>user_email</code>, <code>user_name</code>, <code>user_info</code> viajan al <code>/api/evlog/ingest</code>.</td></tr>
+<tr><td>3</td><td><b>Identidad en la respuesta del modelo</b>: el tutor responde “¡Listo, axael!” — el nombre real se usa como contexto.</td></tr>
+<tr><td>4</td><td><b>Cuota mensual en servidor</b>, visible en la UI y expuesta por <code>usage.getActionAccessStatus</code>.</td></tr>
+<tr><td>5</td><td><b>CSP en modo report-only</b>: los incumplimientos se envían a Sentry como <code>/security/</code> (<code>production-csp</code>), y la CSP permite <code>'unsafe-inline'</code> + <code>'wasm-unsafe-eval'</code>.</td></tr>
+<tr><td>6</td><td><b>Sin secretos de servidor</b> en el cliente: solo keys públicas de telemetría. ✓</td></tr>
+</table>
+
+<h2>6 · Entregado en el proyecto</h2>
+<table>
+<tr><th>Ruta</th><th>Contenido</th></tr>
+<tr><td><code>re/astra-ai/ANALISIS.md</code></td><td>Dossier completo</td></tr>
+<tr><td><code>re/astra-ai/datos/mapa.json</code></td><td>Mapa machine-readable (stack, tRPC, trackers, datos)</td></tr>
+<tr><td><code>re/astra-ai/datos/trafico-runtime.json</code></td><td>Captura real de red (redactada)</td></tr>
+<tr><td><code>re/astra-ai/capturas/</code></td><td>3 capturas de la app funcionando</td></tr>
+<tr><td><code>re/astra-ai/app/</code></td><td>Espejo de la app: HTML + manifest + 39 chunks</td></tr>
+<tr><td><code>re/astra-ai/scripts/descargar-app.mjs</code></td><td>Script reproducible (verificado) para rebajar y re-mapear</td></tr>
+<tr><td><code>re/astra-ai/NOTICE.md</code></td><td>Procedencia y licencias</td></tr>
+</table>
+<footer>Repo: <b>github.com/traderxael/astra-study-app</b> · rama <code>main</code> · commit <code>7318fb2</code> · 15/11/2026</footer>
+</div></body></html>
+

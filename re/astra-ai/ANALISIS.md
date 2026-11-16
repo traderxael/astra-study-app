@@ -154,10 +154,11 @@ sí (va a su propio dominio).
 ```
 re/astra-ai/
 ├─ ANALISIS.md              este documento
+├─ informe.html             este mismo informe en HTML (autocontenido, con capturas)
 ├─ NOTICE.md                procedencia y licencias de lo incluido
 ├─ datos/mapa.json          mapa machine-readable (stack, tRPC, trackers, datos)
 ├─ datos/trafico-runtime.json   captura real de red (resumida, sin credenciales)
-├─ capturas/                3 capturas de la app funcionando
+├─ capturas/                3 capturas de la app funcionando + informe-astra.png
 ├─ app/                     espejo de la app descargada del sitio (HTML + manifest + 39 chunks)
 └─ scripts/descargar-app.mjs  script para volver a bajar la app y regenerar el mapa
 ```
