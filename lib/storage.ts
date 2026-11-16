@@ -137,6 +137,33 @@ export async function saveFile(
     return storagePath;
   }
 
+  // 3) Postgres (Neon/Supabase/Docker): binario en base64. Es el backend
+  //    por defecto en produccion porque el FS de Vercel es de solo lectura.
+  const { prisma } = await import("./db");
+  const db = prisma as unknown as {
+    fileBlob?: {
+      upsert: (a: unknown) => Promise<unknown>;
+    };
+  };
+  if (db.fileBlob) {
+    await db.fileBlob.upsert({
+      where: { key: storagePath },
+      update: {
+        dataBase64: buffer.toString("base64"),
+        mimeType: file.type || null,
+        size: buffer.length,
+      },
+      create: {
+        key: storagePath,
+        dataBase64: buffer.toString("base64"),
+        mimeType: file.type || null,
+        size: buffer.length,
+      },
+    });
+    return storagePath;
+  }
+
+  // 4) Fallback local: disco (solo dev, con FS escribible).
   const dest = path.join(fallbackDir(), storagePath);
   await mkdir(path.dirname(dest), { recursive: true });
   await writeFile(dest, buffer);
@@ -166,6 +193,19 @@ export async function deleteFile(storagePath: string): Promise<void> {
       },
     ).catch(() => undefined);
     return;
+  }
+  // Postgres (FileBlob): borra la fila si existe.
+  try {
+    const { prisma } = await import("./db");
+    const db = prisma as unknown as {
+      fileBlob?: { deleteMany: (a: unknown) => Promise<unknown> };
+    };
+    if (db.fileBlob) {
+      await db.fileBlob.deleteMany({ where: { key: storagePath } });
+      return;
+    }
+  } catch {
+    // Si la DB no esta disponible, se cae al disco (dev).
   }
   const dest = path.join(fallbackDir(), storagePath);
   await unlink(dest).catch(() => undefined);

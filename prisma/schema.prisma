@@ -155,3 +155,22 @@ model ProgressEvent {
   @@index([userId, subjectId])
   @@index([userId, type])
 }
+
+// Binario original de un archivo subido (Task 10).
+//
+// Cuando no hay object storage configurado (Vercel Blob con token estatico
+// o Supabase Storage), los bytes se guardan aca en base64. El FS de las
+// funciones de Vercel es de solo lectura, asi que esta tabla es el backend
+// por defecto en produccion: nada se pierde y no depende de servicios
+// externos. La clave es el storagePath que devuelve saveFile
+// (userId/subjectId/nombre-xxxx), la misma que usan Supabase y Blob.
+model FileBlob {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  dataBase64 String
+  mimeType  String?
+  size      Int
+  createdAt DateTime @default(now())
+
+  @@index([key])
+}
