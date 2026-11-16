@@ -83,20 +83,10 @@ export async function POST(
   let storagePath: string;
   try {
     storagePath = await saveFile(userId, subjectId, file);
-  } catch (e) {
-    // Diagnostico temporal (Task 10): se quita cuando el storage quede estable.
+  } catch (err) {
+    console.error("saveFile failed", err);
     return Response.json(
-      {
-        error: "error al guardar archivo",
-        detail: e instanceof Error ? e.message : String(e),
-        env: {
-          blobStore: Boolean(process.env.BLOB_STORE_ID),
-          oidc: Boolean(process.env.VERCEL_OIDC_TOKEN),
-          blobToken: Boolean(process.env.BLOB_READ_WRITE_TOKEN),
-          supabase: Boolean(process.env.SUPABASE_URL),
-          database: Boolean(process.env.DATABASE_URL),
-        },
-      },
+      { error: "error al guardar archivo" },
       { status: 500 },
     );
   }

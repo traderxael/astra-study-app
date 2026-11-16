@@ -7,6 +7,51 @@ público.
 
 > **[Abrir la app](https://astra-study-app.vercel.app)** · [Repositorio](https://github.com/traderxael/astra-study-app)
 
+## Deploy (hecho, 16-11-2026)
+
+**URL:** https://astra-study-app.vercel.app · repo: https://github.com/traderxael/astra-study-app
+
+Infra conectada desde el CLI (todo free):
+
+| Recurso | Dónde | Estado |
+|---|---|---|
+| App (Next.js) | Vercel · `traderxaels-projects/astra-study-app` | ✅ deploy automático por push a `main` |
+| Postgres | **Neon** (marketplace de Vercel, plan free) | ✅ migrado + seed `estudio@local` / materia "Biología" |
+| Binarios subidos | **Postgres** (`FileBlob`, base64) | ✅ Blob de Vercel quedó con OIDC sin token; ver abajo |
+| Auth | `ADMIN_EMAIL` + `ADMIN_PASSWORD_HASH` (bcrypt) en Vercel | ✅ |
+
+Comandos equivalentes:
+
+```bash
+vercel link --yes --project astra-study-app
+vercel integration accept-terms neon --yes
+vercel install neon --name astra-study-db --environment production --non-interactive
+vercel storage connect <store_id> -e production --non-interactive --yes
+vercel env add ADMIN_EMAIL / ADMIN_PASSWORD_HASH / NEXTAUTH_SECRET / NEXTAUTH_URL
+vercel --prod
+```
+
+### Pendiente: clave de IA
+
+Sin `OPENAI_API_KEY` las rutas de IA responden **503 `{ error: "IA no configurada" }`**
+(por diseño, nunca 500). Para activar el tutor:
+
+```bash
+vercel env add OPENAI_API_KEY production    # sk-...
+vercel --prod
+```
+
+Compatible con cualquier endpoint OpenAI-like (`OPENAI_BASE_URL`): OpenAI, Groq,
+OpenRouter, etc. Costo real = tokens del proveedor.
+
+### Nota sobre el storage
+
+`vercel storage create astra-files --type blob` crea el store con credenciales
+**OIDC** y no deja token estático, así que `lib/storage.ts` usa este orden:
+Vercel Blob (si hay `BLOB_READ_WRITE_TOKEN`) → Supabase Storage → **Postgres
+(`FileBlob`, base64)** → disco (solo dev). En Vercel, si ninguno aplica, falla
+con error explícito en vez de escribir a un FS de solo lectura.
+
 ## Novedades (v2 — Task 9)
 
 Diseño y features alineadas con Astra AI (`app.astra-ai.co`), con el
