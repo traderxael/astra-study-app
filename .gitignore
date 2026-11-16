@@ -8,3 +8,13 @@ next-env.d.ts
 .data/
 test-results/
 playwright-report/
+.vercel
+.env*
+
+# Task 9: DB local embebida y temporales
+.data/
+*.tmp
+v_hash.txt
+v_email.txt
+dburl.txt
+h.txt
