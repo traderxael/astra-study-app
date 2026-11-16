@@ -1,0 +1,59 @@
+{
+  "nota": "Resumen de la captura de red real (Chrome DevTools Protocol via browse) sobre la sesion autenticada. Credenciales, cookies y valores unicos de identificador fueron redactados.",
+  "sesion": {
+    "url": "https://app.astra-ai.co/es-MX",
+    "titulo": "Nuevo chat",
+    "idioma": "es-MX",
+    "usuario": "axel (nombre visible en la UI del tutor)",
+    "timezone": "GMT-0300",
+    "plataforma": "web / Windows"
+  },
+  "ventanas_de_captura": [
+    { "contexto": "carga inicial (home)", "requests_totales": 205 },
+    { "contexto": "chat con el tutor", "requests_totales": 151 }
+  ],
+  "hosts_terceros_contactados": [
+    { "host": "o4507621849235456.ingest.de.sentry.io", "tipo": "Sentry (errores + session replay + CSP reports)", "estado": "ERR_BLOCKED_BY_CLIENT (Brave)" },
+    { "host": "sdk-api-v1.singular.net", "tipo": "Singular (atribucion)", "estado": "ERR_BLOCKED_BY_CLIENT (Brave)" },
+    { "host": "lh3.googleusercontent.com", "tipo": "avatar de usuario (Google)", "estado": "OK" }
+  ],
+  "propios_observados": [
+    { "path": "/api/auth/get-session", "metodo": "GET", "status": 200 },
+    { "path": "/api/trpc/appVersion.checkForUpdates", "metodo": "GET", "status": 200 },
+    { "path": "/api/trpc/profile.getProfile,subscriptions.getOwn,subjects.list", "metodo": "GET", "status": 200 },
+    { "path": "/api/trpc/streak.*,badges.list,userNotifications.getPendingNotifications,usage.*,banners.list,firstTimePromotion.*", "metodo": "GET", "status": 200 },
+    { "path": "/api/trpc/support.getStaffConversationSummary,challenges.replyNotice,duel.replyNotice,stars.summary,limits.getOwn,marketingConsent.get", "metodo": "GET", "status": 200 },
+    { "path": "/api/trpc/usage.getActionAccessStatus,artifacts.getStateByChat", "metodo": "GET", "status": 200 },
+    { "path": "/api/trpc/profile.updateDeviceIdentifiers", "metodo": "POST", "status": 200 },
+    { "path": "/api/i18n/es-MX", "metodo": "GET", "status": 200 },
+    { "path": "/api/e", "metodo": "POST", "status": 204, "nota": "Vercel Analytics" }
+  ],
+  "prueba_funcional_del_tutor": {
+    "prompt_enviado": "prueba RE: cuanto es 2+2?",
+    "chat_creado": "gp1kD6T-sBv4SC4XjJX9R",
+    "respuesta": "Listo, axael! 2+2=4 (emoji). Quieres un mini quiz de sumas?",
+    "followups_generados": [
+      "Como empiezo con la suma?",
+      "Que significa sumar?",
+      "Como se relaciona la suma con la multiplicacion?"
+    ],
+    "limite_mensaje_en_ui": "Consume mas de tu limite mensual",
+    "nota": "La respuesta usa el nombre real del usuario: el tutor opera con identidad, no como anonimo."
+  },
+  "cookies_observadas": [
+    "Next-Country", "g_state", "better-auth.last_used_login_method",
+    "ph_phc_<redacted>_posthog", "Next-Locale", "astra-anon-id",
+    "astra-timezone", "app_attribution_data"
+  ],
+  "campos_del_evento_singular_observados": [
+    "sdid (device id, redactado)", "u (user id, redactado)", "s (atribucion, redactado)",
+    "ecid", "timezone", "screen_height", "screen_width", "os",
+    "web_page_url", "current_device_time", "touchpoint_timestamp",
+    "n (__PAGE_VISIT__)", "is_first_page_visit_in_session", "is_conversion_event"
+  ],
+  "csp_observada": {
+    "modo": "report-only (los incumplimientos se envian a Sentry como /security/)",
+    "script_src": ["'self'", "'unsafe-inline'", "'wasm-unsafe-eval'", "googletagmanager.com", "google-analytics.com", "googleadservices.com", "doubleclick.net", "googlesyndication.com", "facebook.com", "connect.facebook.net", "tiktok.com", "tiktokw.us", "vercel.live", "singular.net", "trustedshops.com", "geogebra.org", "youtube.com", "js.stripe.com", "accounts.google.com"],
+    "nota": "'unsafe-inline' + 'wasm-unsafe-eval' => superficie XSS alta si hay inyeccion de HTML. En runtime se observo un aviso de CSP por eval de string en un chunk."
+  }
+}

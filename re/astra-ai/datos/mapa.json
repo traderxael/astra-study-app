@@ -1,0 +1,139 @@
+{
+  "objetivo": "Astra AI — app.astra-ai.co",
+  "titulo_producto": "Astra AI — Tu tutor de IA 24/7 para todas las materias",
+  "descripcion_manifest": "The most advanced AI math tutor",
+  "categoria": "education (preparacion examen PAES, Chile)",
+  "stack_detectado": {
+    "framework": "Next.js 15 (App Router, Turbopack)",
+    "chunks": "39 bundles en /_next/static/immutable/chunks/ (2.01 MB)",
+    "api": "tRPC v10 (batch=1) sobre /api/trpc",
+    "api_version": 7,
+    "auth": "Better Auth (/api/auth/get-session)",
+    "eventos_propios": "pipeline 'evlog' propio -> POST /api/evlog/ingest",
+    "cdn": "cdn.astra-ai.co",
+    "storage": "Cloudflare R2 (pub-52ddbfade8b641de80810e91dd746ae0.r2.dev)",
+    "despliegue": "Vercel (va.vercel-scripts.com, /api/e)",
+    "idioma": "es-MX (es-MX en el locale por defecto de la sesion)"
+  },
+  "procedimientos_trpc_descubiertos": {
+    "perfil_y_cuenta": [
+      "profile.getProfile",
+      "profile.updateDeviceIdentifiers",
+      "auth.saveYourAccount",
+      "marketingConsent.get"
+    ],
+    "contenido_y_tutor": [
+      "artifacts.getStateByChat",
+      "appVersion.checkForUpdates"
+    ],
+    "producto_y_upsell": [
+      "subscriptions.getOwn",
+      "usage.getActionAccessStatus",
+      "usage.getSubscriptionTopUpClaimStatus",
+      "limits.getOwn",
+      "firstTimePromotion.featureFirstTimePromotionInfo",
+      "firstTimePromotion.activeFirstTimePromotionInfo",
+      "banners.list",
+      "productUpdates.feed"
+    ],
+    "gamificacion": [
+      "streak.getStreak",
+      "streak.getTodayStatus",
+      "stars.summary",
+      "badges.list",
+      "duel.today",
+      "duel.replyNotice",
+      "challenges.replyNotice"
+    ],
+    "social_y_soporte": [
+      "subjects.list",
+      "userNotifications.getPendingNotifications",
+      "support.getStaffConversationSummary"
+    ],
+    "archivos": ["file.upload"]
+  },
+  "acciones_de_uso": ["transcription", "oral-tutor-chat"],
+  "feature_flags": ["instructor.chat-message"],
+  "inputs_que_pide_el_cliente": [
+    "timezone",
+    "platform (web)",
+    "locale (es-MX)",
+    "publicOnly",
+    "pageTarget",
+    "clientVersion + apiVersion"
+  ],
+  "endpoints_propios": [
+    "/api/trpc/*",
+    "/api/auth/get-session",
+    "/api/evlog/ingest",
+    "/api/i18n/es-MX",
+    "/api/e (Vercel Analytics)"
+  ],
+  "hosts_expuestos_en_el_bundle": {
+    "app": "app.astra-ai.co",
+    "cdn": "cdn.astra-ai.co",
+    "admin": "admin.astra-ai.co",
+    "admin_staging": "sadmin.astra-ai.co",
+    "staging": "staging.astra-ai.co",
+    "raiz": "astra-ai.co",
+    "r2_bucket": "pub-52ddbfade8b641de80810e91dd746ae0.r2.dev",
+    "r2_cuenta": "8de056ee5342231a79ce6a75a334c5a0.r2.cloudflarestorage.com"
+  },
+  "telemetria_y_tracking": {
+    "sentry": {
+      "dsn_org": "4507621849235456",
+      "dsn_proyecto": "4507621918376016",
+      "sentry_key": "157672002bf72e1c8cfdb41f3242aa6d",
+      "release": "63f64d08d43071689cfd78ffebe452677ad5e1bb",
+      "sdk": "sentry.javascript.nextjs/10.76.2",
+      "env": "production-csp"
+    },
+    "posthog": { "project_key": "f7ad4b3a46642aa720687b4c4659b475" },
+    "singular": {
+      "sdk": "WebSDK-v1.4.12",
+      "app_id": "astra_ai_9becea26",
+      "app_id_plataforma": "com.astra-ai.web",
+      "host": "sdk-api-v1.singular.net"
+    },
+    "google_analytics_4": { "measurement_id": "G-BYYKE1LW9M" },
+    "google_tag_manager": { "container_id": "GTM-WJ5ZPX4V" },
+    "vercel_analytics": { "host": "va.vercel-scripts.com" },
+    "permisos_por_csp": [
+      "googletagmanager.com", "*.google-analytics.com", "analytics.google.com",
+      "*.analytics.google.com", "googleadservices.com", "*.doubleclick.net",
+      "*.googlesyndication.com", "connect.facebook.net", "facebook.com",
+      "*.tiktok.com", "*.tiktokw.us", "vercel.live", "web-sdk-cdn.singular.net",
+      "widgets.trustedshops.com", "geogebra.org", "youtube.com",
+      "js.stripe.com", "*.js.stripe.com", "cdn.jsdelivr.net", "cdnjs.cloudflare.com"
+    ],
+    "blocklist_interna": "El bundle incluye una regex de bloqueo de trackers (/google-analytics\\\\.com/i, /googleadservices\\\\.com/i, /doubleclick\\\\.net/i, /hotjar\\\\.com/i, /clarity\\\\.ms/i) -> hotjar y clarity NO se cargan",
+    "bloqueado_en_runtime": "Las peticiones a sentry.io y singular.net devolvieron ERR_BLOCKED_BY_CLIENT en Brave (shields/adblock)"
+  },
+  "datos_que_envia_la_app": {
+    "pipeline_propio_evlog": [
+      "event", "eventName", "payload", "timestamp",
+      "user_email", "user_id", "user_name", "user_info",
+      "channel", "environment", "level", "service", "href"
+    ],
+    "singular_event": [
+      "sdid (device id)", "u (usuario)", "s (atribucion)", "ecid",
+      "timezone", "screen_height", "screen_width", "os",
+      "web_page_url", "current_device_time", "touchpoint_timestamp"
+    ],
+    "cookies_primera_parte": [
+      "astra-anon-id", "astra-timezone", "app_attribution_data",
+      "onboarding-complete", "user-routing-snapshot", "Next-Locale", "Next-Country"
+    ],
+    "campos_de_contexto_en_bundle": [
+      "email", "userId", "timeZone", "prompt", "app_version", "session_id",
+      "utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term", "os_version"
+    ]
+  },
+  "notable": [
+    "Los endpoints /admin y /staging y el bucket R2 estan escritos en el bundle del cliente (Turbopack env)",
+    "El tutor responde usando el nombre del usuario ('Listo, axael') -> PII en el servidor",
+    "El chat de prueba creo el chatId gp1kD6T-sBv4SC4XjJX9R y la app mostro 'Consume mas de tu limite mensual' -> hay cuota mensual",
+    "El pipeline evlog usa navigator.sendBeacon + batch de 10 con backoff exponencial (1s -> 30s)",
+    "No se encontro ningun token/secret de servidor en el bundle: solo keys publicas de telemetry"
+  ]
+}
