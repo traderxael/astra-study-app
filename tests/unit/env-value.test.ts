@@ -4,7 +4,6 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createRequire } from "node:module";
 import bcrypt from "bcryptjs";
-// @ts-expect-error - módulo .mjs sin tipos
 import { escapeEnvValue, formatEnvAssignment } from "../../lib/env-value.mjs";
 
 const require = createRequire(import.meta.url);
@@ -34,18 +33,29 @@ describe("valores sensibles en .env", () => {
 
     const before = process.env.ADMIN_PASSWORD_HASH;
     const beforeMode = process.env.NODE_ENV;
+    // NODE_ENV es de solo lectura en los tipos de Next.js: hay que mutarlo
+    // con defineProperty/Reflect para que el test compile con strict.
+    const setNodeEnv = (value: string): void => {
+      Object.defineProperty(process.env, "NODE_ENV", {
+        value,
+        configurable: true,
+        writable: true,
+        enumerable: true,
+      });
+    };
     delete process.env.ADMIN_PASSWORD_HASH;
     // En modo "test" @next/env ignora .env.local: forzamos development.
-    process.env.NODE_ENV = "development";
+    setNodeEnv("development");
     try {
       loadEnvConfig(dir, true);
-      expect(process.env.ADMIN_PASSWORD_HASH).toBe(hash);
-      expect(bcrypt.compareSync("test-pass", process.env.ADMIN_PASSWORD_HASH)).toBe(true);
+      const loaded = process.env.ADMIN_PASSWORD_HASH ?? "";
+      expect(loaded).toBe(hash);
+      expect(bcrypt.compareSync("test-pass", loaded)).toBe(true);
     } finally {
       if (before === undefined) delete process.env.ADMIN_PASSWORD_HASH;
       else process.env.ADMIN_PASSWORD_HASH = before;
-      if (beforeMode === undefined) delete process.env.NODE_ENV;
-      else process.env.NODE_ENV = beforeMode;
+      if (beforeMode === undefined) Reflect.deleteProperty(process.env, "NODE_ENV");
+      else setNodeEnv(beforeMode);
     }
   });
 });

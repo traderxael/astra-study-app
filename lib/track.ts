@@ -28,6 +28,7 @@ async function progressRows(
   userId: string,
   subjectId: string,
   since?: Date,
+  type?: string,
 ): Promise<ProgressRow[]> {
   const db = prisma as unknown as {
     progressEvent?: {
@@ -41,6 +42,7 @@ async function progressRows(
         userId,
         subjectId,
         ...(since ? { createdAt: { gte: since } } : {}),
+        ...(type ? { type } : {}),
       },
       select: { type: true, createdAt: true },
     });
@@ -115,18 +117,30 @@ export async function trackTask(
 ): Promise<void> {
   const db = prisma as unknown as {
     progressEvent?: {
-      count: (a: unknown) => Promise<number>;
+      count?: (a: unknown) => Promise<number>;
     };
   };
   if (!db.progressEvent) return;
+  let existing = 0;
   try {
-    const existing = await db.progressEvent.count({
-      where: { userId, subjectId, type: taskId },
-    });
-    if (existing > 0) return; // el handler ya persistió el suyo
+    if (typeof db.progressEvent.count === "function") {
+      existing = await db.progressEvent.count({
+        where: { userId, subjectId, type: taskId },
+      });
+    } else {
+      // Entornos degradados / mocks sin `count`: contamos con findMany,
+      // que es el método que sí está disponible en esos mismos mocks.
+      // "flashcard" convive con el alias histórico "flashcards".
+      const types = taskId === "flashcard" ? ["flashcard", "flashcards"] : [taskId];
+      const rows = await Promise.all(
+        types.map((type) => progressRows(userId, subjectId, undefined, type)),
+      );
+      existing = rows.reduce((total, group) => total + group.length, 0);
+    }
   } catch (err) {
     console.error("trackTask count failed", err);
     return;
   }
+  if (existing > 0) return; // el handler ya persistió el suyo
   await logEvent(userId, subjectId, taskId as EventType, meta);
 }
