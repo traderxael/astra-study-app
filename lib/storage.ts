@@ -164,6 +164,13 @@ export async function saveFile(
   }
 
   // 4) Fallback local: disco (solo dev, con FS escribible).
+  if (process.env.VERCEL) {
+    // En Vercel el FS es de solo lectura: si ningun backend persistio el
+    // binario, fallar es mejor que creperar un archivo que no existe.
+    throw new Error(
+      "sin backend de storage: falta FileBlob en la DB o BLOB_READ_WRITE_TOKEN",
+    );
+  }
   const dest = path.join(fallbackDir(), storagePath);
   await mkdir(path.dirname(dest), { recursive: true });
   await writeFile(dest, buffer);
