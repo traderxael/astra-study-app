@@ -1,0 +1,23 @@
+name: CI
+
+# Puerta de calidad mínima: detecta errores de tipos y regresiones de tests
+# en cada push a main y en cada PR. El build/deploy lo valida Vercel aparte
+# (necesita secretos de DB y storage que no están disponibles en este job).
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
